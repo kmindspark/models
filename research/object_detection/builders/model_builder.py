@@ -33,6 +33,7 @@ from object_detection.meta_architectures import context_rcnn_meta_arch
 from object_detection.meta_architectures import faster_rcnn_meta_arch
 from object_detection.meta_architectures import rfcn_meta_arch
 from object_detection.meta_architectures import ssd_meta_arch
+from object_detection.meta_architectures import detr_meta_arch
 from object_detection.predictors.heads import mask_head
 from object_detection.protos import losses_pb2
 from object_detection.protos import model_pb2
@@ -729,12 +730,15 @@ def _build_faster_rcnn_model(frcnn_config, is_training, add_summaries):
             second_stage_mask_prediction_loss_weight),
         **common_kwargs)
 
+def detr_builder(is_training, add_summaries):
+    return detr_meta_arch.DETRMetaArch()
+
 EXPERIMENTAL_META_ARCH_BUILDER_MAP = {
+    "detr": detr_builder
 }
 
-
 def _build_experimental_model(config, is_training, add_summaries=True):
-  return EXPERIMENTAL_META_ARCH_BUILDER_MAP[config.name](
+  return EXPERIMENTAL_META_ARCH_BUILDER_MAP['detr'](
       is_training, add_summaries)
 
 

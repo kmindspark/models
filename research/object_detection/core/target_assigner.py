@@ -57,6 +57,8 @@ from object_detection.utils import tf_version
 
 if tf_version.is_tf1():
   from object_detection.matchers import bipartite_matcher  # pylint: disable=g-import-not-at-top
+elif tf_version.is_tf2():
+  from object_detection.matchers import hungarian_matcher
 
 ResizeMethod = tf2.image.ResizeMethod
 
@@ -433,6 +435,11 @@ def create_target_assigner(reference, stage=None,
                                            negatives_lower_than_unmatched=False,
                                            use_matmul_gather=use_matmul_gather)
     box_coder_instance = faster_rcnn_box_coder.FasterRcnnBoxCoder()
+
+  elif reference == 'DETR':
+    similarity_calc = sim_calc.IouSimilarity()
+    matcher = hungarian_matcher.HungarianBipartiteMatcher()
+    box_coder_instance = mean_stddev_box_coder.MeanStddevBoxCoder()
 
   else:
     raise ValueError('No valid combination of reference and stage.')
