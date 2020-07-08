@@ -113,25 +113,18 @@ class DETRMetaArch(model.DetectionModel):
        groundtruth_masks_list, groundtruth_weights_list
       ) = self._format_groundtruth_data(
           self._image_batch_shape_2d(prediction_dict['image_shape']))
-      loss_dict = self._loss_rpn(
-          prediction_dict['rpn_box_encodings'],
-          prediction_dict['rpn_objectness_predictions_with_background'],
-          prediction_dict['anchors'], groundtruth_boxlists,
-          groundtruth_classes_with_background_list, groundtruth_weights_list)
-      if self._number_of_stages > 1:
-        loss_dict.update(
-            self._loss_box_classifier(
-                prediction_dict['refined_box_encodings'],
-                prediction_dict['class_predictions_with_background'],
-                prediction_dict['proposal_boxes'],
-                prediction_dict['num_proposals'], groundtruth_boxlists,
-                groundtruth_classes_with_background_list,
-                groundtruth_weights_list, prediction_dict['image_shape'],
-                prediction_dict.get('mask_predictions'), groundtruth_masks_list,
-                prediction_dict.get(
-                    fields.DetectionResultFields.detection_boxes),
-                prediction_dict.get(
-                    fields.DetectionResultFields.num_detections)))
+      loss_dict = self._loss_box_classifier(
+            prediction_dict['refined_box_encodings'],
+            prediction_dict['class_predictions_with_background'],
+            prediction_dict['proposal_boxes'],
+            prediction_dict['num_proposals'], groundtruth_boxlists,
+            groundtruth_classes_with_background_list,
+            groundtruth_weights_list, prediction_dict['image_shape'],
+            prediction_dict.get('mask_predictions'), groundtruth_masks_list,
+            prediction_dict.get(
+                fields.DetectionResultFields.detection_boxes),
+            prediction_dict.get(
+                fields.DetectionResultFields.num_detections))
     return loss_dict
 
     def _loss_box_classifier(self,
