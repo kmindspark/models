@@ -730,8 +730,8 @@ def _build_faster_rcnn_model(frcnn_config, is_training, add_summaries):
             second_stage_mask_prediction_loss_weight),
         **common_kwargs)
 
-def detr_builder(is_training, add_summaries):
-    return detr_meta_arch.DETRMetaArch()
+def detr_builder(is_training, add_summaries, config):
+    return detr_meta_arch.DETRMetaArch(image_resizer=config.image_resizer, )
 
 EXPERIMENTAL_META_ARCH_BUILDER_MAP = {
     "detr": detr_builder
@@ -739,7 +739,7 @@ EXPERIMENTAL_META_ARCH_BUILDER_MAP = {
 
 def _build_experimental_model(config, is_training, add_summaries=True):
   return EXPERIMENTAL_META_ARCH_BUILDER_MAP['detr'](
-      is_training, add_summaries)
+      is_training, add_summaries, config)
 
 
 # The class ID in the groundtruth/model architecture is usually 0-based while
