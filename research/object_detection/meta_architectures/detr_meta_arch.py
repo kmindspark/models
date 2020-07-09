@@ -18,7 +18,47 @@ from object_detection.meta_architectures import detr_transformer
 from object_detection.matchers import hungarian_matcher
 
 class DETRMetaArch(model.DetectionModel):
-    def __init__(self):
+    def __init__(self,
+                 is_training,
+                  num_classes,
+                  image_resizer_fn,
+                  feature_extractor,
+                  number_of_stages,
+                  first_stage_anchor_generator,
+                  first_stage_target_assigner,
+                  first_stage_atrous_rate,
+                  first_stage_box_predictor_arg_scope_fn,
+                  first_stage_box_predictor_kernel_size,
+                  first_stage_box_predictor_depth,
+                  first_stage_minibatch_size,
+                  first_stage_sampler,
+                  first_stage_non_max_suppression_fn,
+                  first_stage_max_proposals,
+                  first_stage_localization_loss_weight,
+                  first_stage_objectness_loss_weight,
+                  crop_and_resize_fn,
+                  initial_crop_size,
+                  maxpool_kernel_size,
+                  maxpool_stride,
+                  second_stage_target_assigner,
+                  second_stage_mask_rcnn_box_predictor,
+                  second_stage_batch_size,
+                  second_stage_sampler,
+                  second_stage_non_max_suppression_fn,
+                  second_stage_score_conversion_fn,
+                  second_stage_localization_loss_weight,
+                  second_stage_classification_loss_weight,
+                  second_stage_classification_loss,
+                  second_stage_mask_prediction_loss_weight=1.0,
+                  hard_example_miner=None,
+                  parallel_iterations=16,
+                  add_summaries=True,
+                  clip_anchors_to_image=False,
+                  use_static_shapes=False,
+                  resize_masks=True,
+                  freeze_batchnorm=False,
+                  return_raw_detections_during_predict=False,
+                  output_final_box_features=False):
         self.num_queries = 100
         self.hidden_dimension = 100
         self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=False)
@@ -163,7 +203,7 @@ class DETRMetaArch(model.DetectionModel):
         [total_num_proposals, num_classes + 1] containing class
         predictions (logits) for each of the anchors.  Note that this tensor
         *includes* background class predictions (at class index 0).
-      proposal_boxes: [batch_size, self.max_num_proposals, 4] representing
+      proposal_boxes: [batch_size, self.num_queries, 4] representing
         decoded proposal bounding boxes.
       num_proposals: A Tensor of type `int32`. A 1-D tensor of shape [batch]
         representing the number of proposals predicted for each image in
@@ -210,11 +250,11 @@ class DETRMetaArch(model.DetectionModel):
           tf.maximum(num_proposals, tf.ones_like(num_proposals)), 1),
                                      dtype=tf.float32)
       normalizer = tf.tile(num_proposals_or_one,
-                           [1, self.max_num_proposals]) * batch_size
+                           [1, self.num_queries]) * batch_size
 
       (batch_cls_targets_with_background, batch_cls_weights, batch_reg_targets,
        batch_reg_weights, _) = target_assigner.batch_assign_targets(
-           target_assigner=self._detector_target_assigner,
+           target_assigner=self.target_assigner,
            anchors_batch=proposal_boxlists,
            gt_box_batch=groundtruth_boxlists,
            gt_class_targets_batch=groundtruth_classes_with_background_list,
@@ -224,11 +264,11 @@ class DETRMetaArch(model.DetectionModel):
 
       class_predictions_with_background = tf.reshape(
           class_predictions_with_background,
-          [batch_size, self.max_num_proposals, -1])
+          [batch_size, self.num_queries, -1])
 
       flat_cls_targets_with_background = tf.reshape(
           batch_cls_targets_with_background,
-          [batch_size * self.max_num_proposals, -1])
+          [batch_size * self.num_queries, -1])
       one_hot_flat_cls_targets_with_background = tf.argmax(
           flat_cls_targets_with_background, axis=1)
       one_hot_flat_cls_targets_with_background = tf.one_hot(
@@ -239,7 +279,7 @@ class DETRMetaArch(model.DetectionModel):
       if refined_box_encodings.shape[1] == 1:
         reshaped_refined_box_encodings = tf.reshape(
             refined_box_encodings,
-            [batch_size, self.max_num_proposals, self._box_coder.code_size])
+            [batch_size, self.num_queries, self._box_coder.code_size])
       # For anchors with multiple labels, picks refined_location_encodings
       # for just one class to avoid over-counting for regression loss and
       # (optionally) mask loss.
@@ -291,88 +331,150 @@ class DETRMetaArch(model.DetectionModel):
                    'Loss/BoxClassifierLoss/classification_loss':
                        classification_loss}
       second_stage_mask_loss = None
-      if prediction_masks is not None:
-        if groundtruth_masks_list is None:
-          raise ValueError('Groundtruth instance masks not provided. '
-                           'Please configure input reader.')
-
-        if not self._is_training:
-          (proposal_boxes, proposal_boxlists, paddings_indicator,
-           one_hot_flat_cls_targets_with_background
-          ) = self._get_mask_proposal_boxes_and_classes(
-              detection_boxes, num_detections, image_shape,
-              groundtruth_boxlists, groundtruth_classes_with_background_list,
-              groundtruth_weights_list)
-        unmatched_mask_label = tf.zeros(image_shape[1:3], dtype=tf.float32)
-        (batch_mask_targets, _, _, batch_mask_target_weights,
-         _) = target_assigner.batch_assign_targets(
-             target_assigner=self._detector_target_assigner,
-             anchors_batch=proposal_boxlists,
-             gt_box_batch=groundtruth_boxlists,
-             gt_class_targets_batch=groundtruth_masks_list,
-             unmatched_class_label=unmatched_mask_label,
-             gt_weights_batch=groundtruth_weights_list)
-
-        # Pad the prediction_masks with to add zeros for background class to be
-        # consistent with class predictions.
-        if prediction_masks.get_shape().as_list()[1] == 1:
-          # Class agnostic masks or masks for one-class prediction. Logic for
-          # both cases is the same since background predictions are ignored
-          # through the batch_mask_target_weights.
-          prediction_masks_masked_by_class_targets = prediction_masks
-        else:
-          prediction_masks_with_background = tf.pad(
-              prediction_masks, [[0, 0], [1, 0], [0, 0], [0, 0]])
-          prediction_masks_masked_by_class_targets = tf.boolean_mask(
-              prediction_masks_with_background,
-              tf.greater(one_hot_flat_cls_targets_with_background, 0))
-
-        mask_height = shape_utils.get_dim_as_int(prediction_masks.shape[2])
-        mask_width = shape_utils.get_dim_as_int(prediction_masks.shape[3])
-        reshaped_prediction_masks = tf.reshape(
-            prediction_masks_masked_by_class_targets,
-            [batch_size, -1, mask_height * mask_width])
-
-        batch_mask_targets_shape = tf.shape(batch_mask_targets)
-        flat_gt_masks = tf.reshape(batch_mask_targets,
-                                   [-1, batch_mask_targets_shape[2],
-                                    batch_mask_targets_shape[3]])
-
-        # Use normalized proposals to crop mask targets from image masks.
-        flat_normalized_proposals = box_list_ops.to_normalized_coordinates(
-            box_list.BoxList(tf.reshape(proposal_boxes, [-1, 4])),
-            image_shape[1], image_shape[2], check_range=False).get()
-
-        flat_cropped_gt_mask = self._crop_and_resize_fn(
-            tf.expand_dims(flat_gt_masks, -1),
-            tf.expand_dims(flat_normalized_proposals, axis=1),
-            [mask_height, mask_width])
-        # Without stopping gradients into cropped groundtruth masks the
-        # performance with 100-padded groundtruth masks when batch size > 1 is
-        # about 4% worse.
-        # TODO(rathodv): Investigate this since we don't expect any variables
-        # upstream of flat_cropped_gt_mask.
-        flat_cropped_gt_mask = tf.stop_gradient(flat_cropped_gt_mask)
-
-        batch_cropped_gt_mask = tf.reshape(
-            flat_cropped_gt_mask,
-            [batch_size, -1, mask_height * mask_width])
-
-        mask_losses_weights = (
-            batch_mask_target_weights * tf.cast(paddings_indicator,
-                                                dtype=tf.float32))
-        mask_losses = self._second_stage_mask_loss(
-            reshaped_prediction_masks,
-            batch_cropped_gt_mask,
-            weights=tf.expand_dims(mask_losses_weights, axis=-1),
-            losses_mask=losses_mask)
-        total_mask_loss = tf.reduce_sum(mask_losses)
-        normalizer = tf.maximum(
-            tf.reduce_sum(mask_losses_weights * mask_height * mask_width), 1.0)
-        second_stage_mask_loss = total_mask_loss / normalizer
-
-      if second_stage_mask_loss is not None:
-        mask_loss = tf.multiply(self._second_stage_mask_loss_weight,
-                                second_stage_mask_loss, name='mask_loss')
-        loss_dict['Loss/BoxClassifierLoss/mask_loss'] = mask_loss
     return loss_dict
+
+
+################################## UTILITY FUNCTIONS ########################################
+
+def _format_groundtruth_data(self, image_shapes):
+    """Helper function for preparing groundtruth data for target assignment.
+
+    In order to be consistent with the model.DetectionModel interface,
+    groundtruth boxes are specified in normalized coordinates and classes are
+    specified as label indices with no assumed background category.  To prepare
+    for target assignment, we:
+    1) convert boxes to absolute coordinates,
+    2) add a background class at class index 0
+    3) groundtruth instance masks, if available, are resized to match
+       image_shape.
+
+    Args:
+      image_shapes: a 2-D int32 tensor of shape [batch_size, 3] containing
+        shapes of input image in the batch.
+
+    Returns:
+      groundtruth_boxlists: A list of BoxLists containing (absolute) coordinates
+        of the groundtruth boxes.
+      groundtruth_classes_with_background_list: A list of 2-D one-hot
+        (or k-hot) tensors of shape [num_boxes, num_classes+1] containing the
+        class targets with the 0th index assumed to map to the background class.
+      groundtruth_masks_list: If present, a list of 3-D tf.float32 tensors of
+        shape [num_boxes, image_height, image_width] containing instance masks.
+        This is set to None if no masks exist in the provided groundtruth.
+    """
+    # pylint: disable=g-complex-comprehension
+    groundtruth_boxlists = [
+        box_list_ops.to_absolute_coordinates(
+            box_list.BoxList(boxes), image_shapes[i, 0], image_shapes[i, 1])
+        for i, boxes in enumerate(
+            self.groundtruth_lists(fields.BoxListFields.boxes))
+    ]
+    groundtruth_classes_with_background_list = []
+    for one_hot_encoding in self.groundtruth_lists(
+        fields.BoxListFields.classes):
+      groundtruth_classes_with_background_list.append(
+          tf.cast(
+              tf.pad(one_hot_encoding, [[0, 0], [1, 0]], mode='CONSTANT'),
+              dtype=tf.float32))
+
+    groundtruth_masks_list = self._groundtruth_lists.get(
+        fields.BoxListFields.masks)
+    # TODO(rathodv): Remove mask resizing once the legacy pipeline is deleted.
+    if groundtruth_masks_list is not None and self._resize_masks:
+      resized_masks_list = []
+      for mask in groundtruth_masks_list:
+
+        _, resized_mask, _ = self._image_resizer_fn(
+            # Reuse the given `image_resizer_fn` to resize groundtruth masks.
+            # `mask` tensor for an image is of the shape [num_masks,
+            # image_height, image_width]. Below we create a dummy image of the
+            # the shape [image_height, image_width, 1] to use with
+            # `image_resizer_fn`.
+            image=tf.zeros(tf.stack([tf.shape(mask)[1],
+                                     tf.shape(mask)[2], 1])),
+            masks=mask)
+        resized_masks_list.append(resized_mask)
+
+      groundtruth_masks_list = resized_masks_list
+    # Masks could be set to bfloat16 in the input pipeline for performance
+    # reasons. Convert masks back to floating point space here since the rest of
+    # this module assumes groundtruth to be of float32 type.
+    float_groundtruth_masks_list = []
+    if groundtruth_masks_list:
+      for mask in groundtruth_masks_list:
+        float_groundtruth_masks_list.append(tf.cast(mask, tf.float32))
+      groundtruth_masks_list = float_groundtruth_masks_list
+
+    if self.groundtruth_has_field(fields.BoxListFields.weights):
+      groundtruth_weights_list = self.groundtruth_lists(
+          fields.BoxListFields.weights)
+    else:
+      # Set weights for all batch elements equally to 1.0
+      groundtruth_weights_list = []
+      for groundtruth_classes in groundtruth_classes_with_background_list:
+        num_gt = tf.shape(groundtruth_classes)[0]
+        groundtruth_weights = tf.ones(num_gt)
+        groundtruth_weights_list.append(groundtruth_weights)
+
+    return (groundtruth_boxlists, groundtruth_classes_with_background_list,
+            groundtruth_masks_list, groundtruth_weights_list)
+
+  def _image_batch_shape_2d(self, image_batch_shape_1d):
+    """Takes a 1-D image batch shape tensor and converts it to a 2-D tensor.
+
+    Example:
+    If 1-D image batch shape tensor is [2, 300, 300, 3]. The corresponding 2-D
+    image batch tensor would be [[300, 300, 3], [300, 300, 3]]
+
+    Args:
+      image_batch_shape_1d: 1-D tensor of the form [batch_size, height,
+        width, channels].
+
+    Returns:
+      image_batch_shape_2d: 2-D tensor of shape [batch_size, 3] were each row is
+        of the form [height, width, channels].
+    """
+    return tf.tile(tf.expand_dims(image_batch_shape_1d[1:], 0),
+                   [image_batch_shape_1d[0], 1])
+
+  def _padded_batched_proposals_indicator(self,
+                                          num_proposals,
+                                          max_num_proposals):
+    """Creates indicator matrix of non-pad elements of padded batch proposals.
+
+    Args:
+      num_proposals: Tensor of type tf.int32 with shape [batch_size].
+      max_num_proposals: Maximum number of proposals per image (integer).
+
+    Returns:
+      A Tensor of type tf.bool with shape [batch_size, max_num_proposals].
+    """
+    batch_size = tf.size(num_proposals)
+    tiled_num_proposals = tf.tile(
+        tf.expand_dims(num_proposals, 1), [1, max_num_proposals])
+    tiled_proposal_index = tf.tile(
+        tf.expand_dims(tf.range(max_num_proposals), 0), [batch_size, 1])
+    return tf.greater(tiled_num_proposals, tiled_proposal_index)
+
+  def _get_refined_encodings_for_postitive_class(
+      self, refined_box_encodings, flat_cls_targets_with_background,
+      batch_size):
+    # We only predict refined location encodings for the non background
+    # classes, but we now pad it to make it compatible with the class
+    # predictions
+    refined_box_encodings_with_background = tf.pad(refined_box_encodings,
+                                                   [[0, 0], [1, 0], [0, 0]])
+    refined_box_encodings_masked_by_class_targets = (
+        box_list_ops.boolean_mask(
+            box_list.BoxList(
+                tf.reshape(refined_box_encodings_with_background,
+                           [-1, self._box_coder.code_size])),
+            tf.reshape(tf.greater(flat_cls_targets_with_background, 0), [-1]),
+            use_static_shapes=self._use_static_shapes,
+            indicator_sum=batch_size * self.num_queries
+            if self._use_static_shapes else None).get())
+    return tf.reshape(
+        refined_box_encodings_masked_by_class_targets, [
+            batch_size, self.num_queries,
+            self._box_coder.code_size
+        ])
