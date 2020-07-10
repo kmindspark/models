@@ -60,6 +60,7 @@ class DETRMetaArch(model.DetectionModel):
                 freeze_batchnorm=False,
                 return_raw_detections_during_predict=False,
                 output_final_box_features=False):
+        print("Initializing model...")
         self.num_queries = 100
         self.hidden_dimension = 100
         self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=False)
@@ -71,7 +72,7 @@ class DETRMetaArch(model.DetectionModel):
         self.cls = tf.keras.layers.Dense(2)
         self.queries = tf.keras.Variable(tf.random([self.num_queries, self.hidden_dimension]))
         self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
-        self._classification_loss = losses.WeightedSoftmaxClassificationLoss(logit_scale=config.logit_scale)
+        self._classification_loss = losses.WeightedSoftmaxClassificationLoss()
         self._second_stage_loc_loss_weight = second_stage_localization_loss_weight
         self._second_stage_cls_loss_weight = second_stage_classification_loss_weight
 
@@ -330,148 +331,211 @@ class DETRMetaArch(model.DetectionModel):
       second_stage_mask_loss = None
     return loss_dict
 
+  def updates(self):
+    """Returns a list of update operators for this model.
+
+    Returns a list of update operators for this model that must be executed at
+    each training step. The estimator's train op needs to have a control
+    dependency on these updates.
+
+    Returns:
+      A list of update operators.
+    """
+    update_ops = []
+    slim_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    # Copy the slim ops to avoid modifying the collection
+    if slim_update_ops:
+      update_ops.extend(slim_update_ops)
+    # Passing None to get_updates_for grabs updates that should always be
+    # executed and don't depend on any model inputs in the graph.
+    # (E.g. if there was some count that should be incremented every time a
+    # model is run).
+    #
+    # Passing inputs grabs updates that are transitively computed from the
+    # model inputs being passed in.
+    # (E.g. a batchnorm update depends on the observed inputs)
+    if self._feature_extractor_for_proposal_features:
+      if (self._feature_extractor_for_proposal_features !=
+          _UNINITIALIZED_FEATURE_EXTRACTOR):
+        update_ops.extend(
+            self._feature_extractor_for_proposal_features.get_updates_for(None))
+        update_ops.extend(
+            self._feature_extractor_for_proposal_features.get_updates_for(
+                self._feature_extractor_for_proposal_features.inputs))
+    if isinstance(self._first_stage_box_predictor_first_conv,
+                  tf.keras.Model):
+      update_ops.extend(
+          self._first_stage_box_predictor_first_conv.get_updates_for(
+              None))
+      update_ops.extend(
+          self._first_stage_box_predictor_first_conv.get_updates_for(
+              self._first_stage_box_predictor_first_conv.inputs))
+    if self._first_stage_box_predictor.is_keras_model:
+      update_ops.extend(
+          self._first_stage_box_predictor.get_updates_for(None))
+      update_ops.extend(
+          self._first_stage_box_predictor.get_updates_for(
+              self._first_stage_box_predictor.inputs))
+    if self._feature_extractor_for_box_classifier_features:
+      if (self._feature_extractor_for_box_classifier_features !=
+          _UNINITIALIZED_FEATURE_EXTRACTOR):
+        update_ops.extend(
+            self._feature_extractor_for_box_classifier_features.get_updates_for(
+                None))
+        update_ops.extend(
+            self._feature_extractor_for_box_classifier_features.get_updates_for(
+                self._feature_extractor_for_box_classifier_features.inputs))
+    if self._mask_rcnn_box_predictor:
+      if self._mask_rcnn_box_predictor.is_keras_model:
+        update_ops.extend(
+            self._mask_rcnn_box_predictor.get_updates_for(None))
+        update_ops.extend(
+            self._mask_rcnn_box_predictor.get_updates_for(
+                self._mask_rcnn_box_predictor.inputs))
+    return update_ops
 
 ################################## UTILITY FUNCTIONS ########################################
 
 def _format_groundtruth_data(self, image_shapes):
-    """Helper function for preparing groundtruth data for target assignment.
+  """Helper function for preparing groundtruth data for target assignment.
 
-    In order to be consistent with the model.DetectionModel interface,
-    groundtruth boxes are specified in normalized coordinates and classes are
-    specified as label indices with no assumed background category.  To prepare
-    for target assignment, we:
-    1) convert boxes to absolute coordinates,
-    2) add a background class at class index 0
-    3) groundtruth instance masks, if available, are resized to match
-       image_shape.
+  In order to be consistent with the model.DetectionModel interface,
+  groundtruth boxes are specified in normalized coordinates and classes are
+  specified as label indices with no assumed background category.  To prepare
+  for target assignment, we:
+  1) convert boxes to absolute coordinates,
+  2) add a background class at class index 0
+  3) groundtruth instance masks, if available, are resized to match
+      image_shape.
 
-    Args:
-      image_shapes: a 2-D int32 tensor of shape [batch_size, 3] containing
-        shapes of input image in the batch.
+  Args:
+    image_shapes: a 2-D int32 tensor of shape [batch_size, 3] containing
+      shapes of input image in the batch.
 
-    Returns:
-      groundtruth_boxlists: A list of BoxLists containing (absolute) coordinates
-        of the groundtruth boxes.
-      groundtruth_classes_with_background_list: A list of 2-D one-hot
-        (or k-hot) tensors of shape [num_boxes, num_classes+1] containing the
-        class targets with the 0th index assumed to map to the background class.
-      groundtruth_masks_list: If present, a list of 3-D tf.float32 tensors of
-        shape [num_boxes, image_height, image_width] containing instance masks.
-        This is set to None if no masks exist in the provided groundtruth.
-    """
-    # pylint: disable=g-complex-comprehension
-    groundtruth_boxlists = [
-        box_list_ops.to_absolute_coordinates(
-            box_list.BoxList(boxes), image_shapes[i, 0], image_shapes[i, 1])
-        for i, boxes in enumerate(
-            self.groundtruth_lists(fields.BoxListFields.boxes))
-    ]
-    groundtruth_classes_with_background_list = []
-    for one_hot_encoding in self.groundtruth_lists(
-        fields.BoxListFields.classes):
-      groundtruth_classes_with_background_list.append(
-          tf.cast(
-              tf.pad(one_hot_encoding, [[0, 0], [1, 0]], mode='CONSTANT'),
-              dtype=tf.float32))
+  Returns:
+    groundtruth_boxlists: A list of BoxLists containing (absolute) coordinates
+      of the groundtruth boxes.
+    groundtruth_classes_with_background_list: A list of 2-D one-hot
+      (or k-hot) tensors of shape [num_boxes, num_classes+1] containing the
+      class targets with the 0th index assumed to map to the background class.
+    groundtruth_masks_list: If present, a list of 3-D tf.float32 tensors of
+      shape [num_boxes, image_height, image_width] containing instance masks.
+      This is set to None if no masks exist in the provided groundtruth.
+  """
+  # pylint: disable=g-complex-comprehension
+  groundtruth_boxlists = [
+      box_list_ops.to_absolute_coordinates(
+          box_list.BoxList(boxes), image_shapes[i, 0], image_shapes[i, 1])
+      for i, boxes in enumerate(
+          self.groundtruth_lists(fields.BoxListFields.boxes))
+  ]
+  groundtruth_classes_with_background_list = []
+  for one_hot_encoding in self.groundtruth_lists(
+      fields.BoxListFields.classes):
+    groundtruth_classes_with_background_list.append(
+        tf.cast(
+            tf.pad(one_hot_encoding, [[0, 0], [1, 0]], mode='CONSTANT'),
+            dtype=tf.float32))
 
-    groundtruth_masks_list = self._groundtruth_lists.get(
-        fields.BoxListFields.masks)
-    # TODO(rathodv): Remove mask resizing once the legacy pipeline is deleted.
-    if groundtruth_masks_list is not None and self._resize_masks:
-      resized_masks_list = []
-      for mask in groundtruth_masks_list:
+  groundtruth_masks_list = self._groundtruth_lists.get(
+      fields.BoxListFields.masks)
+  # TODO(rathodv): Remove mask resizing once the legacy pipeline is deleted.
+  if groundtruth_masks_list is not None and self._resize_masks:
+    resized_masks_list = []
+    for mask in groundtruth_masks_list:
 
-        _, resized_mask, _ = self._image_resizer_fn(
-            # Reuse the given `image_resizer_fn` to resize groundtruth masks.
-            # `mask` tensor for an image is of the shape [num_masks,
-            # image_height, image_width]. Below we create a dummy image of the
-            # the shape [image_height, image_width, 1] to use with
-            # `image_resizer_fn`.
-            image=tf.zeros(tf.stack([tf.shape(mask)[1],
-                                     tf.shape(mask)[2], 1])),
-            masks=mask)
-        resized_masks_list.append(resized_mask)
+      _, resized_mask, _ = self._image_resizer_fn(
+          # Reuse the given `image_resizer_fn` to resize groundtruth masks.
+          # `mask` tensor for an image is of the shape [num_masks,
+          # image_height, image_width]. Below we create a dummy image of the
+          # the shape [image_height, image_width, 1] to use with
+          # `image_resizer_fn`.
+          image=tf.zeros(tf.stack([tf.shape(mask)[1],
+                                    tf.shape(mask)[2], 1])),
+          masks=mask)
+      resized_masks_list.append(resized_mask)
 
-      groundtruth_masks_list = resized_masks_list
-    # Masks could be set to bfloat16 in the input pipeline for performance
-    # reasons. Convert masks back to floating point space here since the rest of
-    # this module assumes groundtruth to be of float32 type.
-    float_groundtruth_masks_list = []
-    if groundtruth_masks_list:
-      for mask in groundtruth_masks_list:
-        float_groundtruth_masks_list.append(tf.cast(mask, tf.float32))
-      groundtruth_masks_list = float_groundtruth_masks_list
+    groundtruth_masks_list = resized_masks_list
+  # Masks could be set to bfloat16 in the input pipeline for performance
+  # reasons. Convert masks back to floating point space here since the rest of
+  # this module assumes groundtruth to be of float32 type.
+  float_groundtruth_masks_list = []
+  if groundtruth_masks_list:
+    for mask in groundtruth_masks_list:
+      float_groundtruth_masks_list.append(tf.cast(mask, tf.float32))
+    groundtruth_masks_list = float_groundtruth_masks_list
 
-    if self.groundtruth_has_field(fields.BoxListFields.weights):
-      groundtruth_weights_list = self.groundtruth_lists(
-          fields.BoxListFields.weights)
-    else:
-      # Set weights for all batch elements equally to 1.0
-      groundtruth_weights_list = []
-      for groundtruth_classes in groundtruth_classes_with_background_list:
-        num_gt = tf.shape(groundtruth_classes)[0]
-        groundtruth_weights = tf.ones(num_gt)
-        groundtruth_weights_list.append(groundtruth_weights)
+  if self.groundtruth_has_field(fields.BoxListFields.weights):
+    groundtruth_weights_list = self.groundtruth_lists(
+        fields.BoxListFields.weights)
+  else:
+    # Set weights for all batch elements equally to 1.0
+    groundtruth_weights_list = []
+    for groundtruth_classes in groundtruth_classes_with_background_list:
+      num_gt = tf.shape(groundtruth_classes)[0]
+      groundtruth_weights = tf.ones(num_gt)
+      groundtruth_weights_list.append(groundtruth_weights)
 
-    return (groundtruth_boxlists, groundtruth_classes_with_background_list,
-            groundtruth_masks_list, groundtruth_weights_list)
+  return (groundtruth_boxlists, groundtruth_classes_with_background_list,
+          groundtruth_masks_list, groundtruth_weights_list)
 
-  def _image_batch_shape_2d(self, image_batch_shape_1d):
-    """Takes a 1-D image batch shape tensor and converts it to a 2-D tensor.
+def _image_batch_shape_2d(self, image_batch_shape_1d):
+  """Takes a 1-D image batch shape tensor and converts it to a 2-D tensor.
 
-    Example:
-    If 1-D image batch shape tensor is [2, 300, 300, 3]. The corresponding 2-D
-    image batch tensor would be [[300, 300, 3], [300, 300, 3]]
+  Example:
+  If 1-D image batch shape tensor is [2, 300, 300, 3]. The corresponding 2-D
+  image batch tensor would be [[300, 300, 3], [300, 300, 3]]
 
-    Args:
-      image_batch_shape_1d: 1-D tensor of the form [batch_size, height,
-        width, channels].
+  Args:
+    image_batch_shape_1d: 1-D tensor of the form [batch_size, height,
+      width, channels].
 
-    Returns:
-      image_batch_shape_2d: 2-D tensor of shape [batch_size, 3] were each row is
-        of the form [height, width, channels].
-    """
-    return tf.tile(tf.expand_dims(image_batch_shape_1d[1:], 0),
-                   [image_batch_shape_1d[0], 1])
+  Returns:
+    image_batch_shape_2d: 2-D tensor of shape [batch_size, 3] were each row is
+      of the form [height, width, channels].
+  """
+  return tf.tile(tf.expand_dims(image_batch_shape_1d[1:], 0),
+                  [image_batch_shape_1d[0], 1])
 
-  def _padded_batched_proposals_indicator(self,
-                                          num_proposals,
-                                          max_num_proposals):
-    """Creates indicator matrix of non-pad elements of padded batch proposals.
+def _padded_batched_proposals_indicator(self,
+                                        num_proposals,
+                                        max_num_proposals):
+  """Creates indicator matrix of non-pad elements of padded batch proposals.
 
-    Args:
-      num_proposals: Tensor of type tf.int32 with shape [batch_size].
-      max_num_proposals: Maximum number of proposals per image (integer).
+  Args:
+    num_proposals: Tensor of type tf.int32 with shape [batch_size].
+    max_num_proposals: Maximum number of proposals per image (integer).
 
-    Returns:
-      A Tensor of type tf.bool with shape [batch_size, max_num_proposals].
-    """
-    batch_size = tf.size(num_proposals)
-    tiled_num_proposals = tf.tile(
-        tf.expand_dims(num_proposals, 1), [1, max_num_proposals])
-    tiled_proposal_index = tf.tile(
-        tf.expand_dims(tf.range(max_num_proposals), 0), [batch_size, 1])
-    return tf.greater(tiled_num_proposals, tiled_proposal_index)
+  Returns:
+    A Tensor of type tf.bool with shape [batch_size, max_num_proposals].
+  """
+  batch_size = tf.size(num_proposals)
+  tiled_num_proposals = tf.tile(
+      tf.expand_dims(num_proposals, 1), [1, max_num_proposals])
+  tiled_proposal_index = tf.tile(
+      tf.expand_dims(tf.range(max_num_proposals), 0), [batch_size, 1])
+  return tf.greater(tiled_num_proposals, tiled_proposal_index)
 
-  def _get_refined_encodings_for_postitive_class(
-      self, refined_box_encodings, flat_cls_targets_with_background,
-      batch_size):
-    # We only predict refined location encodings for the non background
-    # classes, but we now pad it to make it compatible with the class
-    # predictions
-    refined_box_encodings_with_background = tf.pad(refined_box_encodings,
-                                                   [[0, 0], [1, 0], [0, 0]])
-    refined_box_encodings_masked_by_class_targets = (
-        box_list_ops.boolean_mask(
-            box_list.BoxList(
-                tf.reshape(refined_box_encodings_with_background,
-                           [-1, self._box_coder.code_size])),
-            tf.reshape(tf.greater(flat_cls_targets_with_background, 0), [-1]),
-            use_static_shapes=self._use_static_shapes,
-            indicator_sum=batch_size * self.num_queries
-            if self._use_static_shapes else None).get())
-    return tf.reshape(
-        refined_box_encodings_masked_by_class_targets, [
-            batch_size, self.num_queries,
-            self._box_coder.code_size
-        ])
+def _get_refined_encodings_for_postitive_class(
+    self, refined_box_encodings, flat_cls_targets_with_background,
+    batch_size):
+  # We only predict refined location encodings for the non background
+  # classes, but we now pad it to make it compatible with the class
+  # predictions
+  refined_box_encodings_with_background = tf.pad(refined_box_encodings,
+                                                  [[0, 0], [1, 0], [0, 0]])
+  refined_box_encodings_masked_by_class_targets = (
+      box_list_ops.boolean_mask(
+          box_list.BoxList(
+              tf.reshape(refined_box_encodings_with_background,
+                          [-1, self._box_coder.code_size])),
+          tf.reshape(tf.greater(flat_cls_targets_with_background, 0), [-1]),
+          use_static_shapes=self._use_static_shapes,
+          indicator_sum=batch_size * self.num_queries
+          if self._use_static_shapes else None).get())
+  return tf.reshape(
+      refined_box_encodings_masked_by_class_targets, [
+          batch_size, self.num_queries,
+          self._box_coder.code_size
+      ])
+
