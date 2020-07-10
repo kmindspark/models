@@ -16,6 +16,7 @@
 """A function to build a DetectionModel from configuration."""
 
 import functools
+import sys
 from object_detection.builders import anchor_generator_builder
 from object_detection.builders import box_coder_builder
 from object_detection.builders import box_predictor_builder
@@ -59,6 +60,8 @@ if tf_version.is_tf2():
   from object_detection.models.ssd_mobilenet_v2_fpn_keras_feature_extractor import SSDMobileNetV2FpnKerasFeatureExtractor
   from object_detection.models.ssd_mobilenet_v2_keras_feature_extractor import SSDMobileNetV2KerasFeatureExtractor
   from object_detection.predictors import rfcn_keras_box_predictor
+  if sys.version_info[0] >= 3:
+    from object_detection.models import ssd_efficientnet_bifpn_feature_extractor as ssd_efficientnet_bifpn
 
 if tf_version.is_tf1():
   from object_detection.models import faster_rcnn_inception_resnet_v2_feature_extractor as frcnn_inc_res
@@ -100,6 +103,22 @@ if tf_version.is_tf2():
           ssd_resnet_v1_fpn_keras.SSDResNet101V1FpnKerasFeatureExtractor,
       'ssd_resnet152_v1_fpn_keras':
           ssd_resnet_v1_fpn_keras.SSDResNet152V1FpnKerasFeatureExtractor,
+      'ssd_efficientnet-b0_bifpn_keras':
+          ssd_efficientnet_bifpn.SSDEfficientNetB0BiFPNKerasFeatureExtractor,
+      'ssd_efficientnet-b1_bifpn_keras':
+          ssd_efficientnet_bifpn.SSDEfficientNetB1BiFPNKerasFeatureExtractor,
+      'ssd_efficientnet-b2_bifpn_keras':
+          ssd_efficientnet_bifpn.SSDEfficientNetB2BiFPNKerasFeatureExtractor,
+      'ssd_efficientnet-b3_bifpn_keras':
+          ssd_efficientnet_bifpn.SSDEfficientNetB3BiFPNKerasFeatureExtractor,
+      'ssd_efficientnet-b4_bifpn_keras':
+          ssd_efficientnet_bifpn.SSDEfficientNetB4BiFPNKerasFeatureExtractor,
+      'ssd_efficientnet-b5_bifpn_keras':
+          ssd_efficientnet_bifpn.SSDEfficientNetB5BiFPNKerasFeatureExtractor,
+      'ssd_efficientnet-b6_bifpn_keras':
+          ssd_efficientnet_bifpn.SSDEfficientNetB6BiFPNKerasFeatureExtractor,
+      'ssd_efficientnet-b7_bifpn_keras':
+          ssd_efficientnet_bifpn.SSDEfficientNetB7BiFPNKerasFeatureExtractor,
   }
 
   FASTER_RCNN_KERAS_FEATURE_EXTRACTOR_CLASS_MAP = {
@@ -311,6 +330,14 @@ def _build_ssd_feature_extractor(feature_extractor_config,
             feature_extractor_config.fpn.additional_layer_depth,
     })
 
+  if feature_extractor_config.HasField('bifpn'):
+    kwargs.update({
+        'bifpn_min_level': feature_extractor_config.bifpn.min_level,
+        'bifpn_max_level': feature_extractor_config.bifpn.max_level,
+        'bifpn_num_iterations': feature_extractor_config.bifpn.num_iterations,
+        'bifpn_num_filters': feature_extractor_config.bifpn.num_filters,
+        'bifpn_combine_method': feature_extractor_config.bifpn.combine_method,
+    })
 
   return feature_extractor_class(**kwargs)
 
@@ -1081,6 +1108,22 @@ def mask_proto_to_params(mask_config):
       heatmap_bias_init=mask_config.heatmap_bias_init)
 
 
+def densepose_proto_to_params(densepose_config):
+  """Converts CenterNet.DensePoseEstimation proto to parameter namedtuple."""
+  classification_loss, localization_loss, _, _, _, _, _ = (
+      losses_builder.build(densepose_config.loss))
+  return center_net_meta_arch.DensePoseParams(
+      class_id=densepose_config.class_id,
+      classification_loss=classification_loss,
+      localization_loss=localization_loss,
+      part_loss_weight=densepose_config.part_loss_weight,
+      coordinate_loss_weight=densepose_config.coordinate_loss_weight,
+      num_parts=densepose_config.num_parts,
+      task_loss_weight=densepose_config.task_loss_weight,
+      upsample_to_input_res=densepose_config.upsample_to_input_res,
+      heatmap_bias_init=densepose_config.heatmap_bias_init)
+
+
 def _build_center_net_model(center_net_config, is_training, add_summaries):
   """Build a CenterNet detection model.
 
@@ -1133,6 +1176,11 @@ def _build_center_net_model(center_net_config, is_training, add_summaries):
   if center_net_config.HasField('mask_estimation_task'):
     mask_params = mask_proto_to_params(center_net_config.mask_estimation_task)
 
+  densepose_params = None
+  if center_net_config.HasField('densepose_estimation_task'):
+    densepose_params = densepose_proto_to_params(
+        center_net_config.densepose_estimation_task)
+
   return center_net_meta_arch.CenterNetMetaArch(
       is_training=is_training,
       add_summaries=add_summaries,
@@ -1142,7 +1190,8 @@ def _build_center_net_model(center_net_config, is_training, add_summaries):
       object_center_params=object_center_params,
       object_detection_params=object_detection_params,
       keypoint_params_dict=keypoint_params_dict,
-      mask_params=mask_params)
+      mask_params=mask_params,
+      densepose_params=densepose_params)
 
 
 def _build_center_net_feature_extractor(
