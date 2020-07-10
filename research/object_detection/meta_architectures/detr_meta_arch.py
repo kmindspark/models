@@ -13,6 +13,7 @@ from object_detection.core import standard_fields as fields
 from object_detection.core import target_assigner
 from object_detection.utils import shape_utils
 from object_detection.models import faster_rcnn_resnet_keras_feature_extractor
+from object_detection.core import losses
 
 from object_detection.meta_architectures import detr_transformer
 from object_detection.matchers import hungarian_matcher
@@ -70,6 +71,9 @@ class DETRMetaArch(model.DetectionModel):
         self.cls = tf.keras.layers.Dense(2)
         self.queries = tf.keras.Variable(tf.random([self.num_queries, self.hidden_dimension]))
         self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
+        self._classification_loss = losses.WeightedSoftmaxClassificationLoss(logit_scale=config.logit_scale)
+        self._second_stage_loc_loss_weight = second_stage_localization_loss_weight
+        self._second_stage_cls_loss_weight = second_stage_classification_loss_weight
 
     def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
         x = self.first_stage(preprocessed_inputs)
@@ -294,13 +298,13 @@ class DETRMetaArch(model.DetectionModel):
       if self.groundtruth_has_field(fields.InputDataFields.is_annotated):
         losses_mask = tf.stack(self.groundtruth_lists(
             fields.InputDataFields.is_annotated))
-      second_stage_loc_losses = self._second_stage_localization_loss(
+      second_stage_loc_losses = self._localization_loss(
           reshaped_refined_box_encodings,
           batch_reg_targets,
           weights=batch_reg_weights,
           losses_mask=losses_mask) / normalizer
       second_stage_cls_losses = ops.reduce_sum_trailing_dimensions(
-          self._second_stage_classification_loss(
+          self._classification_loss(
               class_predictions_with_background,
               batch_cls_targets_with_background,
               weights=batch_cls_weights,
@@ -314,11 +318,6 @@ class DETRMetaArch(model.DetectionModel):
           second_stage_cls_losses * tf.cast(paddings_indicator,
                                             dtype=tf.float32))
 
-      if self._hard_example_miner:
-        (second_stage_loc_loss, second_stage_cls_loss
-        ) = self._unpad_proposals_and_apply_hard_mining(
-            proposal_boxlists, second_stage_loc_losses,
-            second_stage_cls_losses, num_proposals)
       localization_loss = tf.multiply(self._second_stage_loc_loss_weight,
                                       second_stage_loc_loss,
                                       name='localization_loss')
