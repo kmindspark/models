@@ -69,6 +69,7 @@ class DETRMetaArch(model.DetectionModel):
         self.bboxes = tf.keras.layers.Dense(4)
         self.cls = tf.keras.layers.Dense(2)
         self.queries = tf.keras.Variable(tf.random([self.num_queries, self.hidden_dimension]))
+        self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
 
     def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
         x = self.first_stage(preprocessed_inputs)
