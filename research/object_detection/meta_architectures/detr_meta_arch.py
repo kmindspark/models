@@ -19,47 +19,47 @@ from object_detection.meta_architectures import detr_transformer
 from object_detection.matchers import hungarian_matcher
 
 class DETRMetaArch(model.DetectionModel):
-    def __init__(self,
-                 is_training,
-                  num_classes,
-                  image_resizer_fn,
-                  feature_extractor,
-                  number_of_stages,
-                  first_stage_anchor_generator,
-                  first_stage_target_assigner,
-                  first_stage_atrous_rate,
-                  first_stage_box_predictor_arg_scope_fn,
-                  first_stage_box_predictor_kernel_size,
-                  first_stage_box_predictor_depth,
-                  first_stage_minibatch_size,
-                  first_stage_sampler,
-                  first_stage_non_max_suppression_fn,
-                  first_stage_max_proposals,
-                  first_stage_localization_loss_weight,
-                  first_stage_objectness_loss_weight,
-                  crop_and_resize_fn,
-                  initial_crop_size,
-                  maxpool_kernel_size,
-                  maxpool_stride,
-                  second_stage_target_assigner,
-                  second_stage_mask_rcnn_box_predictor,
-                  second_stage_batch_size,
-                  second_stage_sampler,
-                  second_stage_non_max_suppression_fn,
-                  second_stage_score_conversion_fn,
-                  second_stage_localization_loss_weight,
-                  second_stage_classification_loss_weight,
-                  second_stage_classification_loss,
-                  second_stage_mask_prediction_loss_weight=1.0,
-                  hard_example_miner=None,
-                  parallel_iterations=16,
-                  add_summaries=True,
-                  clip_anchors_to_image=False,
-                  use_static_shapes=False,
-                  resize_masks=True,
-                  freeze_batchnorm=False,
-                  return_raw_detections_during_predict=False,
-                  output_final_box_features=False):
+  def __init__(self,
+                is_training,
+                num_classes,
+                image_resizer_fn,
+                feature_extractor,
+                number_of_stages,
+                first_stage_anchor_generator,
+                first_stage_target_assigner,
+                first_stage_atrous_rate,
+                first_stage_box_predictor_arg_scope_fn,
+                first_stage_box_predictor_kernel_size,
+                first_stage_box_predictor_depth,
+                first_stage_minibatch_size,
+                first_stage_sampler,
+                first_stage_non_max_suppression_fn,
+                first_stage_max_proposals,
+                first_stage_localization_loss_weight,
+                first_stage_objectness_loss_weight,
+                crop_and_resize_fn,
+                initial_crop_size,
+                maxpool_kernel_size,
+                maxpool_stride,
+                second_stage_target_assigner,
+                second_stage_mask_rcnn_box_predictor,
+                second_stage_batch_size,
+                second_stage_sampler,
+                second_stage_non_max_suppression_fn,
+                second_stage_score_conversion_fn,
+                second_stage_localization_loss_weight,
+                second_stage_classification_loss_weight,
+                second_stage_classification_loss,
+                second_stage_mask_prediction_loss_weight=1.0,
+                hard_example_miner=None,
+                parallel_iterations=16,
+                add_summaries=True,
+                clip_anchors_to_image=False,
+                use_static_shapes=False,
+                resize_masks=True,
+                freeze_batchnorm=False,
+                return_raw_detections_during_predict=False,
+                output_final_box_features=False):
         self.num_queries = 100
         self.hidden_dimension = 100
         self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=False)
@@ -75,17 +75,14 @@ class DETRMetaArch(model.DetectionModel):
         self._second_stage_loc_loss_weight = second_stage_localization_loss_weight
         self._second_stage_cls_loss_weight = second_stage_classification_loss_weight
 
-    def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
+  def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
         x = self.first_stage(preprocessed_inputs)
         x = tf.reshape(x, [x.shape[0], x.shape[1] * x.shape[2], x.shape[3]])
         x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)])
         x = self.ffn(x)
         return self.bboxes(x), self.cls(x)
 
-    def loss(self, prediction_dict, true_image_shapes, scope=None):
-        return 1
-
-    def preprocess(self, inputs):
+  def preprocess(self, inputs):
         """Feature-extractor specific preprocessing.
 
         See base class.
@@ -117,15 +114,15 @@ class DETRMetaArch(model.DetectionModel):
         return (self.feature_extractor.preprocess(resized_inputs),
                 true_image_shapes)
 
-    def restore_from_objects(self, fine_tune_checkpoint_type='detection'):
+  def restore_from_objects(self, fine_tune_checkpoint_type='detection'):
         raise NotImplementedError("Model restoration implemented yet.")
 
-    def restore_map(self,
+  def restore_map(self,
                     fine_tune_checkpoint_type='detection',
                     load_all_detection_checkpoint_vars=False):
         raise NotImplementedError("Model restoration implemented yet.")
 
-    def loss(self, prediction_dict, true_image_shapes, scope=None):
+  def loss(self, prediction_dict, true_image_shapes, scope=None):
     """Compute scalar loss tensors given prediction tensors.
 
     If number_of_stages=1, only RPN related losses are computed (i.e.,
@@ -172,7 +169,7 @@ class DETRMetaArch(model.DetectionModel):
                 fields.DetectionResultFields.num_detections))
     return loss_dict
 
-    def _loss_box_classifier(self,
+  def _loss_box_classifier(self,
                            refined_box_encodings,
                            class_predictions_with_background,
                            proposal_boxes,
