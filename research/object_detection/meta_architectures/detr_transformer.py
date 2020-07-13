@@ -82,8 +82,8 @@ class Transformer(tf.keras.Model):
     """
     super(Transformer, self).__init__(name=name)
     self.params = params
-    self.embedding_softmax_layer = embedding_layer.EmbeddingSharedWeights(
-        params["vocab_size"], params["hidden_size"])
+    #self.embedding_softmax_layer = embedding_layer.EmbeddingSharedWeights(
+    #    params["vocab_size"], params["hidden_size"])
     self.encoder_stack = EncoderStack(params)
     self.decoder_stack = DecoderStack(params)
     self.position_embedding = position_embedding.RelativePositionEmbedding(
@@ -201,18 +201,20 @@ class Transformer(tf.keras.Model):
         # Shift targets to the right, and remove the last element
         decoder_inputs = tf.pad(decoder_inputs,
                                 [[0, 0], [1, 0], [0, 0]])[:, :-1, :]
-      with tf.name_scope("add_pos_encoding"):
-        length = tf.shape(decoder_inputs)[1]
-        pos_encoding = self.position_embedding(decoder_inputs)
-        pos_encoding = tf.cast(pos_encoding, self.params["dtype"])
-        decoder_inputs += pos_encoding
+      length = tf.shape(decoder_inputs)[1]
+      #with tf.name_scope("add_pos_encoding"):
+      #  
+      #  pos_encoding = self.position_embedding(decoder_inputs)
+      #  pos_encoding = tf.cast(pos_encoding, self.params["dtype"])
+      #  decoder_inputs += pos_encoding
       if training:
         decoder_inputs = tf.nn.dropout(
             decoder_inputs, rate=self.params["layer_postprocess_dropout"])
 
       # Run values
-      decoder_self_attention_bias = model_utils.get_decoder_self_attention_bias(
-          length, dtype=self.params["dtype"])
+      #decoder_self_attention_bias = model_utils.get_decoder_self_attention_bias(
+      #    length, dtype=self.params["dtype"])
+      decoder_self_attention_bias = 0
       outputs = self.decoder_stack(
           decoder_inputs,
           encoder_outputs,
@@ -445,7 +447,7 @@ class EncoderStack(tf.keras.layers.Layer):
       with tf.name_scope("layer_%d" % n):
         with tf.name_scope("self_attention"):
           encoder_inputs = self_attention_layer(
-              encoder_inputs, attention_bias, training=training)
+              encoder_inputs, attention_bias, training=training, use_bias=False)
         with tf.name_scope("ffn"):
           encoder_inputs = feed_forward_network(
               encoder_inputs, training=training)

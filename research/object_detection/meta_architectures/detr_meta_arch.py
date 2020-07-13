@@ -62,16 +62,20 @@ class DETRMetaArch(model.DetectionModel):
                 return_raw_detections_during_predict=False,
                 output_final_box_features=False):
         print("Initializing model...")
+        super(DETRMetaArch, self).__init__(num_classes=num_classes)
+        self._image_resizer_fn = image_resizer_fn
         self.num_queries = 100
         self.hidden_dimension = 100
         self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=False)
         self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()
         self.target_assigner = target_assigner.create_target_assigner('DETR', 'detection')
-        self.transformer = detr_transformer.Transformer()
+        self.transformer_args = {"hidden_size": 1024, "attention_dropout": 0, "num_heads": 16, "layer_postprocess_dropout": 0, "dtype": tf.float32, "num_hidden_layers": 5, "filter_size": 512, "relu_dropout": 0}
+        self.transformer = detr_transformer.Transformer(self.transformer_args)
         self.ffn = self.feature_extractor.get_box_classifier_feature_extractor_model()
         self.bboxes = tf.keras.layers.Dense(4)
-        self.cls = tf.keras.layers.Dense(2)
-        self.queries = tf.keras.Variable(tf.random([self.num_queries, self.hidden_dimension]))
+        self.cls = tf.keras.layers.Dense(num_classes + 1)
+        self.cls_activation = tf.keras.layers.Softmax()
+        self.queries = tf.keras.backend.variable(tf.random.uniform([self.num_queries, self.hidden_dimension]))
         self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
         self._classification_loss = losses.WeightedSoftmaxClassificationLoss()
         self._second_stage_loc_loss_weight = second_stage_localization_loss_weight
@@ -82,7 +86,7 @@ class DETRMetaArch(model.DetectionModel):
         x = tf.reshape(x, [x.shape[0], x.shape[1] * x.shape[2], x.shape[3]])
         x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)])
         x = self.ffn(x)
-        return self.bboxes(x), self.cls(x)
+        return self.bboxes(x), self.cls_activation(self.cls(x))
 
   def preprocess(self, inputs):
         """Feature-extractor specific preprocessing.
@@ -341,6 +345,9 @@ class DETRMetaArch(model.DetectionModel):
     Returns:
       A list of update operators.
     """
+    raise NotImplementedError("This function should only be called in TF 1.x")
+
+  def regularization_losses(self):
     raise NotImplementedError("This function should only be called in TF 1.x")
 
   def postprocess(self, prediction_dict, true_image_shapes):
