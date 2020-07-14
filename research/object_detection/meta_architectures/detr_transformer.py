@@ -221,9 +221,7 @@ class Transformer(tf.keras.Model):
           decoder_self_attention_bias,
           attention_bias,
           training=training)
-      logits = self.embedding_softmax_layer(outputs, mode="linear")
-      logits = tf.cast(logits, tf.float32)
-      return logits
+      return outputs
 
   def _get_symbols_to_logits_fn(self, max_decode_length, training):
     """Returns a decoding function that calculates logits of the next tokens."""

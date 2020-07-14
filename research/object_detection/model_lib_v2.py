@@ -114,7 +114,8 @@ def _compute_losses_and_predictions_dicts(
   """
   model_lib.provide_groundtruth(model, labels)
   preprocessed_images = features[fields.InputDataFields.image]
-
+  print("PREDICTING")
+  print(tf.executing_eagerly())
   prediction_dict = model.predict(
       preprocessed_images,
       features[fields.InputDataFields.true_image_shape])

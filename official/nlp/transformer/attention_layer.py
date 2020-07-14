@@ -154,6 +154,7 @@ class Attention(tf.keras.layers.Layer):
     weights = tf.nn.softmax(logits, name="attention_weights")
     if training:
       weights = tf.nn.dropout(weights, rate=self.attention_dropout)
+      
     attention_output = tf.einsum("BNFT,BTNH->BFNH", weights, value)
 
     # Run the outputs through another linear projection layer. Recombining heads
@@ -166,6 +167,6 @@ class SelfAttention(Attention):
   """Multiheaded self-attention layer."""
 
   def call(self, query_input, bias, training, cache=None,
-           decode_loop_step=None):
+           decode_loop_step=None, use_bias=True):
     return super(SelfAttention, self).call(
-        query_input, query_input, bias, training, cache, decode_loop_step)
+        query_input, query_input, bias, training, cache, decode_loop_step, use_bias=use_bias)
