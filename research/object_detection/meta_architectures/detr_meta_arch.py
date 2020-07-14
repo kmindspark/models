@@ -65,7 +65,7 @@ class DETRMetaArch(model.DetectionModel):
     print("Initializing model...")
     super(DETRMetaArch, self).__init__(num_classes=num_classes)
     self._image_resizer_fn = image_resizer_fn
-    self.num_queries = 100
+    self.num_queries = 10
     self.hidden_dimension = 1024
     self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=False)
     self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()
@@ -313,6 +313,10 @@ class DETRMetaArch(model.DetectionModel):
                 refined_box_encodings,
                 one_hot_flat_cls_targets_with_background, batch_size))
 
+      tf.print(reshaped_refined_box_encodings)
+      tf.print(batch_reg_targets)
+      tf.print(batch_reg_weights)
+
       losses_mask = None
       if self.groundtruth_has_field(fields.InputDataFields.is_annotated):
         losses_mask = tf.stack(self.groundtruth_lists(
@@ -329,6 +333,8 @@ class DETRMetaArch(model.DetectionModel):
               weights=batch_cls_weights,
               losses_mask=losses_mask),
           ndims=2) / normalizer
+
+      tf.print(second_stage_cls_losses)
 
       second_stage_loc_loss = tf.reduce_sum(
           second_stage_loc_losses * tf.cast(paddings_indicator,
