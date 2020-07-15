@@ -361,6 +361,9 @@ class DETRMetaArch(model.DetectionModel):
       if self.groundtruth_has_field(fields.InputDataFields.is_annotated):
         losses_mask = tf.stack(self.groundtruth_lists(
             fields.InputDataFields.is_annotated))
+
+      print(reshaped_refined_box_encodings)
+      print(batch_reg_targets)
       second_stage_loc_losses = self._localization_loss(
           reshaped_refined_box_encodings,
           batch_reg_targets,
@@ -395,7 +398,7 @@ class DETRMetaArch(model.DetectionModel):
                        localization_loss,
                    'Loss/BoxClassifierLoss/classification_loss':
                        classification_loss}
-      print(loss_dict)
+      #print(loss_dict)
     return loss_dict
 
   def updates(self):
