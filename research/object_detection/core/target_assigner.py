@@ -42,6 +42,7 @@ import tensorflow.compat.v2 as tf2
 
 from object_detection.box_coders import faster_rcnn_box_coder
 from object_detection.box_coders import mean_stddev_box_coder
+from object_detection.box_coders import detr_box_coder
 from object_detection.core import box_coder
 from object_detection.core import box_list
 from object_detection.core import box_list_ops
@@ -162,6 +163,11 @@ class TargetAssigner(object):
       ValueError: if anchors or groundtruth_boxes are not of type
         box_list.BoxList
     """
+    #tf.print(anchors.data['boxes'])
+    #tf.print(anchors.data['boxes'].shape)
+    #tf.print(groundtruth_boxes.data['boxes'])
+    #tf.print(groundtruth_boxes.data['boxes'].shape)
+
     if not isinstance(anchors, box_list.BoxList):
       raise ValueError('anchors must be an BoxList')
     if not isinstance(groundtruth_boxes, box_list.BoxList):
@@ -196,10 +202,18 @@ class TargetAssigner(object):
 
     with tf.control_dependencies(
         [unmatched_shape_assert, labels_and_box_shapes_assert]):
+
+      #tf.print(anchors.data['boxes'])
+      #tf.print(anchors.data['boxes'].shape)
+      #tf.print(groundtruth_boxes.data['boxes'])
+      #tf.print(groundtruth_boxes.data['boxes'].shape)
+      
       match_quality_matrix = self._similarity_calc.compare(groundtruth_boxes,
                                                            anchors)
+      print(match_quality_matrix)                                                     
       match = self._matcher.match(match_quality_matrix,
                                   valid_rows=tf.greater(groundtruth_weights, 0))
+      print(match._match_results)
       reg_targets = self._create_regression_targets(anchors,
                                                     groundtruth_boxes,
                                                     match)
@@ -434,15 +448,11 @@ def create_target_assigner(reference, stage=None,
                                            force_match_for_each_row=False,
                                            negatives_lower_than_unmatched=False,
                                            use_matmul_gather=use_matmul_gather)
-    box_coder_instance = faster_rcnn_box_coder.FasterRcnnBoxCoder()
+    box_coder_instance = detr_box_coder.DETRBoxCoder()
 
   elif reference == 'DETR':
     similarity_calc = sim_calc.IouSimilarity()
-    matcher = argmax_matcher.ArgMaxMatcher(matched_threshold=0.5,
-                                           unmatched_threshold=0.1,
-                                           force_match_for_each_row=False,
-                                           negatives_lower_than_unmatched=False,
-                                           use_matmul_gather=use_matmul_gather) #hungarian_matcher.HungarianBipartiteMatcher()
+    matcher = hungarian_matcher.HungarianBipartiteMatcher()
     box_coder_instance = mean_stddev_box_coder.MeanStddevBoxCoder()
 
   else:

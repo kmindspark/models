@@ -114,8 +114,6 @@ def _compute_losses_and_predictions_dicts(
   """
   model_lib.provide_groundtruth(model, labels)
   preprocessed_images = features[fields.InputDataFields.image]
-  print("PREDICTING")
-  print(tf.executing_eagerly())
   prediction_dict = model.predict(
       preprocessed_images,
       features[fields.InputDataFields.true_image_shape])
@@ -587,7 +585,7 @@ def train_loop(
           return strategy.reduce(tf.distribute.ReduceOp.SUM,
                                  per_replica_losses, axis=None)
 
-        @tf.function
+        #@tf.function
         def _dist_train_step(data_iterator):
           """A distributed train step."""
 

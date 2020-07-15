@@ -70,11 +70,12 @@ class DETRMetaArch(model.DetectionModel):
     self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=False)
     self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()
     self.target_assigner = target_assigner.create_target_assigner('DETR', 'detection')
-    self.transformer_args = {"hidden_size": 1024, "attention_dropout": 0, "num_heads": 8, "layer_postprocess_dropout": 0, "dtype": tf.float32, "num_hidden_layers": 4, "filter_size": 512, "relu_dropout": 0}
+    self.transformer_args = {"hidden_size": 1024, "attention_dropout": 0, "num_heads": 8, "layer_postprocess_dropout": 0, "dtype": tf.float32, 
+      "num_hidden_layers": 4, "filter_size": 512, "relu_dropout": 0}
     self.transformer = detr_transformer.Transformer(self.transformer_args)
     self.ffn = self.feature_extractor.get_box_classifier_feature_extractor_model()
     self.bboxes = tf.keras.layers.Dense(4)
-    self.cls = tf.keras.layers.Dense(num_classes + 1)
+    self.cls = tf.keras.layers.Dense(num_classes + 1, activation="sigmoid")
     self.cls_activation = tf.keras.layers.Softmax()
     self.queries = tf.keras.backend.variable(tf.random.uniform([self.num_queries, self.hidden_dimension]))
     self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
@@ -82,20 +83,24 @@ class DETRMetaArch(model.DetectionModel):
     self._second_stage_loc_loss_weight = second_stage_localization_loss_weight
     self._second_stage_cls_loss_weight = second_stage_classification_loss_weight
     self._box_coder = self.target_assigner.get_box_coder()
+    self._parallel_iterations = parallel_iterations
 
   def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
     image_shape = tf.shape(preprocessed_inputs)
+    #print(preprocessed_inputs)
     x = self.first_stage(preprocessed_inputs)
+    #print(x)
     x = tf.reshape(x, [x.shape[0], x.shape[1] * x.shape[2], x.shape[3]])
     x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)])
     #x = tf.reshape(x, [x.shape[0], ])
     #x = self.ffn(x)
-    bboxes_encoded, logits = self.bboxes(x), self.cls_activation(self.cls(x))
+    bboxes_encoded, logits = self.bboxes(x), (self.cls(x))
     bboxes_encoded = tf.keras.backend.sigmoid(bboxes_encoded)
+    bboxes_encoded = ops.normalized_to_image_coordinates(
+        bboxes_encoded, image_shape, self._parallel_iterations)
+    #print(bboxes_encoded)
     reshaped_bboxes = tf.reshape(bboxes_encoded, [bboxes_encoded.shape[0] * bboxes_encoded.shape[1], 1, bboxes_encoded.shape[2]])
     batches_queries = tf.repeat(tf.expand_dims(self.num_queries, 0), x.shape[0], axis=0)
-    #tf.enable_eager_execution()
-    #print(batches_queries.numpy())
     return {
       "refined_box_encodings": reshaped_bboxes,
       "class_predictions_with_background": logits,
@@ -172,6 +177,8 @@ class DETRMetaArch(model.DetectionModel):
         'second_stage_classification_loss') to scalar tensors representing
         corresponding loss values.
     """
+    print("Proposal boxes")
+    #print(prediction_dict['proposal_boxes'])
     with tf.name_scope(scope, 'Loss', prediction_dict.values()):
       (groundtruth_boxlists, groundtruth_classes_with_background_list,
        groundtruth_masks_list, groundtruth_weights_list
@@ -313,10 +320,6 @@ class DETRMetaArch(model.DetectionModel):
                 refined_box_encodings,
                 one_hot_flat_cls_targets_with_background, batch_size))
 
-      tf.print(reshaped_refined_box_encodings)
-      tf.print(batch_reg_targets)
-      tf.print(batch_reg_weights)
-
       losses_mask = None
       if self.groundtruth_has_field(fields.InputDataFields.is_annotated):
         losses_mask = tf.stack(self.groundtruth_lists(
@@ -334,7 +337,7 @@ class DETRMetaArch(model.DetectionModel):
               losses_mask=losses_mask),
           ndims=2) / normalizer
 
-      tf.print(second_stage_cls_losses)
+      #tf.print(second_stage_cls_losses)
 
       second_stage_loc_loss = tf.reduce_sum(
           second_stage_loc_losses * tf.cast(paddings_indicator,
