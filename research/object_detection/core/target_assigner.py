@@ -271,7 +271,7 @@ class TargetAssigner(object):
     Returns:
       reg_targets: a float32 tensor with shape [N, box_code_dimension]
     """
-    print(groundtruth_boxes.data['boxes'])
+    #print(groundtruth_boxes.data['boxes'])
     matched_gt_boxes = match.gather_based_on_match(
         groundtruth_boxes.get(),
         unmatched_value=tf.zeros(4),
@@ -288,7 +288,6 @@ class TargetAssigner(object):
                                    matched_keypoints)
     #print(matched_gt_boxlist)
     matched_reg_targets = self._box_coder.encode(matched_gt_boxlist, anchors)
-    #print(matched_reg_targets)
     match_results_shape = shape_utils.combined_static_and_dynamic_shape(
         match.match_results)
 
@@ -299,6 +298,7 @@ class TargetAssigner(object):
     reg_targets = tf.where(matched_anchors_mask,
                            matched_reg_targets,
                            unmatched_ignored_reg_targets)
+    print(reg_targets)
     return reg_targets
 
   def _default_regression_target(self):
