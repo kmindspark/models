@@ -395,6 +395,7 @@ class DETRMetaArch(model.DetectionModel):
                        localization_loss,
                    'Loss/BoxClassifierLoss/classification_loss':
                        classification_loss}
+      print(loss_dict)
     return loss_dict
 
   def updates(self):
