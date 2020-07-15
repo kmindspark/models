@@ -105,9 +105,9 @@ class DETRMetaArch(model.DetectionModel):
     #x = tf.reshape(x, [x.shape[0], ])
     #x = self.ffn(x)
     bboxes_encoded, logits = self.bboxes(x), self.cls_activation(self.cls(x))
-    bboxes_encoded = tf.keras.backend.sigmoid(bboxes_encoded)
-    bboxes_encoded = ops.normalized_to_image_coordinates(
-        bboxes_encoded, image_shape, self._parallel_iterations)
+    #bboxes_encoded = tf.keras.backend.sigmoid(bboxes_encoded)
+    #bboxes_encoded = ops.normalized_to_image_coordinates(
+    #    bboxes_encoded, image_shape, self._parallel_iterations)
     #print(bboxes_encoded)
     reshaped_bboxes = tf.reshape(bboxes_encoded, [bboxes_encoded.shape[0] * bboxes_encoded.shape[1], 1, bboxes_encoded.shape[2]])
     batches_queries = tf.repeat(tf.expand_dims(self.num_queries, 0), x.shape[0], axis=0)
