@@ -30,8 +30,9 @@ python model_main_tf2.py -- \
 from absl import flags
 import tensorflow.compat.v2 as tf
 from object_detection import model_lib_v2
-
-tf.logging.set_verbosity(tf.logging.ERROR)
+import loggingimport logging
+logger = tf.get_logger()
+logger.setLevel(logging.ERROR)
 
 flags.DEFINE_string('pipeline_config_path', None, 'Path to pipeline config '
                     'file.')
