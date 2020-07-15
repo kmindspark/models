@@ -177,7 +177,7 @@ class DETRMetaArch(model.DetectionModel):
         'second_stage_classification_loss') to scalar tensors representing
         corresponding loss values.
     """
-    print("Proposal boxes")
+    #print("Proposal boxes")
     #print(prediction_dict['proposal_boxes'])
     with tf.name_scope(scope, 'Loss', prediction_dict.values()):
       (groundtruth_boxlists, groundtruth_classes_with_background_list,

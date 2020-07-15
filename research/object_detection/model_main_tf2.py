@@ -32,7 +32,7 @@ import tensorflow.compat.v2 as tf
 from object_detection import model_lib_v2
 import logging
 logger = tf.get_logger()
-logger.setLevel(logging.ERROR)
+#logger.setLevel(logging.ERROR)
 
 flags.DEFINE_string('pipeline_config_path', None, 'Path to pipeline config '
                     'file.')
