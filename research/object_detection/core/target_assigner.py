@@ -203,9 +203,9 @@ class TargetAssigner(object):
     with tf.control_dependencies(
         [unmatched_shape_assert, labels_and_box_shapes_assert]):
 
-      #tf.print(anchors.data['boxes'])
+      tf.print(anchors.data['boxes'])
       #tf.print(anchors.data['boxes'].shape)
-      #tf.print(groundtruth_boxes.data['boxes'])
+      tf.print(groundtruth_boxes.data['boxes'])
       #tf.print(groundtruth_boxes.data['boxes'].shape)
       
       match_quality_matrix = self._similarity_calc.compare(groundtruth_boxes,
