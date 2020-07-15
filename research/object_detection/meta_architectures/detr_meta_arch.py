@@ -16,6 +16,7 @@ from object_detection.utils import shape_utils
 from object_detection.utils import ops
 from object_detection.models import faster_rcnn_resnet_keras_feature_extractor
 from object_detection.core import losses
+from object_detection.utils import variables_helper
 
 from object_detection.meta_architectures import detr_transformer
 from object_detection.matchers import hungarian_matcher
@@ -73,7 +74,7 @@ class DETRMetaArch(model.DetectionModel):
     self.transformer_args = {"hidden_size": 1024, "attention_dropout": 0, "num_heads": 8, "layer_postprocess_dropout": 0, "dtype": tf.float32, 
       "num_hidden_layers": 4, "filter_size": 512, "relu_dropout": 0}
     self.transformer = detr_transformer.Transformer(self.transformer_args)
-    self.ffn = self.feature_extractor.get_box_classifier_feature_extractor_model()
+    #self.ffn = self.feature_extractor.get_box_classifier_feature_extractor_model()
     self.bboxes = tf.keras.layers.Dense(4)
     self.cls = tf.keras.layers.Dense(num_classes + 1, activation="sigmoid")
     self.cls_activation = tf.keras.layers.Softmax()
@@ -84,6 +85,15 @@ class DETRMetaArch(model.DetectionModel):
     self._second_stage_cls_loss_weight = second_stage_classification_loss_weight
     self._box_coder = self.target_assigner.get_box_coder()
     self._parallel_iterations = parallel_iterations
+
+  @property
+  def first_stage_feature_extractor_scope(self):
+    return 'FirstStageFeatureExtractor'
+
+  @property
+  def second_stage_feature_extractor_scope(self):
+    return 'SecondStageFeatureExtractor'
+
 
   def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
     image_shape = tf.shape(preprocessed_inputs)
@@ -142,13 +152,40 @@ class DETRMetaArch(model.DetectionModel):
                 true_image_shapes)
 
   def restore_from_objects(self, fine_tune_checkpoint_type='detection'):
-        raise NotImplementedError("Model restoration implemented yet.")
+    """Returns a map of Trackable objects to load from a foreign checkpoint.
+
+    Returns a dictionary of Tensorflow 2 Trackable objects (e.g. tf.Module
+    or Checkpoint). This enables the model to initialize based on weights from
+    another task. For example, the feature extractor variables from a
+    classification model can be used to bootstrap training of an object
+    detector. When loading from an object detection model, the checkpoint model
+    should have the same parameters as this detection model with exception of
+    the num_classes parameter.
+
+    Note that this function is intended to be used to restore Keras-based
+    models when running Tensorflow 2, whereas restore_map (above) is intended
+    to be used to restore Slim-based models when running Tensorflow 1.x.
+
+    Args:
+      fine_tune_checkpoint_type: whether to restore from a full detection
+        checkpoint (with compatible variable names) or to restore from a
+        classification checkpoint for initialization prior to training.
+        Valid values: `detection`, `classification`. Default 'detection'.
+
+    Returns:
+      A dict mapping keys to Trackable objects (tf.Module or Checkpoint).
+    """
+    if fine_tune_checkpoint_type == 'classification':
+      return {
+          'feature_extractor':
+              self.feature_extractor.classification_backbone
+      }
 
   def restore_map(self,
-                    fine_tune_checkpoint_type='detection',
-                    load_all_detection_checkpoint_vars=False):
-        raise NotImplementedError("Model restoration implemented yet.")
-
+                  fine_tune_checkpoint_type='classification',
+                  load_all_detection_checkpoint_vars=False):
+    print("NOT FOR TF 2")
+    
   def loss(self, prediction_dict, true_image_shapes, scope=None):
     """Compute scalar loss tensors given prediction tensors.
 
@@ -714,3 +751,27 @@ class DETRMetaArch(model.DetectionModel):
     if nmsed_masks is not None:
       detections[fields.DetectionResultFields.detection_masks] = nmsed_masks
     return detections
+
+  def restore_from_classification_checkpoint_fn(
+        self,
+        first_stage_feature_extractor_scope,
+        second_stage_feature_extractor_scope):
+      """Returns a map of variables to load from a foreign checkpoint.
+
+      Args:
+        first_stage_feature_extractor_scope: A scope name for the first stage
+          feature extractor.
+        second_stage_feature_extractor_scope: A scope name for the second stage
+          feature extractor.
+
+      Returns:
+        A dict mapping variable names (to load from a checkpoint) to variables in
+        the model graph.
+      """
+      variables_to_restore = {}
+      for variable in variables_helper.get_global_variables_safely():
+        for scope_name in [first_stage_feature_extractor_scope]:
+          if variable.op.name.startswith(scope_name):
+            var_name = variable.op.name.replace(scope_name + '/', '')
+            variables_to_restore[var_name] = variable
+      return variables_to_restore
