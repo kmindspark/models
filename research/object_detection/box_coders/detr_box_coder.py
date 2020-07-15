@@ -69,9 +69,7 @@ class DETRBoxCoder(box_coder.BoxCoder):
       [ty, tx, th, tw].
     """
     # Convert anchors to the center coordinate representation.
-    tf.print(boxes.data['boxes'])
     ycenter, xcenter, h, w = boxes.get_center_coordinates_and_sizes()
-    tf.print([ycenter, xcenter, h, w])
     # Avoid NaN in division and log below.
     h += EPSILON
     w += EPSILON
