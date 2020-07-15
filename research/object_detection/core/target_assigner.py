@@ -286,9 +286,9 @@ class TargetAssigner(object):
           ignored_value=tf.zeros(groundtruth_keypoints.get_shape()[1:]))
       matched_gt_boxlist.add_field(fields.BoxListFields.keypoints,
                                    matched_keypoints)
-    print(matched_gt_boxlist.data['boxes'])
+    #print(matched_gt_boxlist.data['boxes'])
     matched_reg_targets = self._box_coder.encode(matched_gt_boxlist, anchors)
-    print(matched_reg_targets)
+    #print(matched_reg_targets)
     match_results_shape = shape_utils.combined_static_and_dynamic_shape(
         match.match_results)
 
