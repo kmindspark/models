@@ -31,6 +31,8 @@ from absl import flags
 import tensorflow.compat.v2 as tf
 from object_detection import model_lib_v2
 
+tf.logging.set_verbosity(tf.logging.ERROR)
+
 flags.DEFINE_string('pipeline_config_path', None, 'Path to pipeline config '
                     'file.')
 flags.DEFINE_integer('num_train_steps', None, 'Number of train steps.')

@@ -57,7 +57,7 @@ class HungarianBipartiteMatcher(matcher.Matcher):
     distance_matrix = -1 * valid_row_sim_matrix
     num_valid_rows = tf.reduce_sum(tf.cast(valid_rows, dtype=tf.float32))
     numpy_distance = distance_matrix.numpy()
-    print(numpy_distance)
+    #print(numpy_distance)
     row_indices, col_indices = linear_sum_assignment(numpy_distance)
     match_results = np.full(numpy_distance.shape[1], -1)
     

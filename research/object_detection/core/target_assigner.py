@@ -210,10 +210,10 @@ class TargetAssigner(object):
       
       match_quality_matrix = self._similarity_calc.compare(groundtruth_boxes,
                                                            anchors)
-      print(match_quality_matrix)                                                     
+      #print(match_quality_matrix)                                                     
       match = self._matcher.match(match_quality_matrix,
                                   valid_rows=tf.greater(groundtruth_weights, 0))
-      print(match._match_results)
+      #print(match._match_results)
       reg_targets = self._create_regression_targets(anchors,
                                                     groundtruth_boxes,
                                                     match)
