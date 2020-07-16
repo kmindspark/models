@@ -105,6 +105,7 @@ class DETRMetaArch(model.DetectionModel):
     #x = tf.reshape(x, [x.shape[0], ])
     #x = self.ffn(x)
     bboxes_encoded, logits = self.bboxes(x), self.cls_activation(self.cls(x))
+    print(bboxes_encoded)
     #bboxes_encoded = tf.keras.backend.sigmoid(bboxes_encoded)
     #bboxes_encoded = ops.normalized_to_image_coordinates(
     #    bboxes_encoded, image_shape, self._parallel_iterations)
@@ -362,7 +363,7 @@ class DETRMetaArch(model.DetectionModel):
         losses_mask = tf.stack(self.groundtruth_lists(
             fields.InputDataFields.is_annotated))
 
-      print("NEWPRINT")
+      #print("NEWPRINT")
       #print(reshaped_refined_box_encodings)
       #print(batch_reg_targets)
       second_stage_loc_losses = self._localization_loss(
