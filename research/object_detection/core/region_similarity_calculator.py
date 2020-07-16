@@ -96,9 +96,9 @@ class IouAndClassSimilarity(RegionSimilarityCalculator):
     """
     pass
   
-  #def _compare(self, boxlist1, boxlist2, gt_labels, um_labels):
-    #if () 
-    #box_list_ops.iou(boxlist1, boxlist2)
+  def _compare(self, boxlist1, boxlist2, gt_labels, um_labels):
+    classification_scores = tf.matmul(gt_labels, um_labels, transpose_a=True)
+    return box_list_ops.iou(boxlist1, boxlist2) - tf.log(classification_scores)
 
 
 class NegSqDistSimilarity(RegionSimilarityCalculator):

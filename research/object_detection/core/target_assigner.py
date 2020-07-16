@@ -207,11 +207,10 @@ class TargetAssigner(object):
       #tf.print(anchors.data['boxes'].shape)
       #tf.print(groundtruth_boxes.data['boxes'])
       #tf.print(groundtruth_boxes.data['boxes'].shape)
-      print(tf.math.reduce_sum(groundtruth_labels, axis=1))
       
       match_quality_matrix = self._similarity_calc.compare(groundtruth_boxes,
-                                                           anchors)#, gt_labels=groundtruth_labels,
-                                                           #um_labels=unmatched_class_label)
+                                                           anchors, gt_labels=groundtruth_labels,
+                                                           um_labels=unmatched_class_label)
       #print(match_quality_matrix)                                                     
       match = self._matcher.match(match_quality_matrix,
                                   valid_rows=tf.greater(groundtruth_weights, 0))
@@ -462,7 +461,7 @@ def create_target_assigner(reference, stage=None,
     box_coder_instance = detr_box_coder.DETRBoxCoder()
 
   elif reference == 'DETR':
-    similarity_calc = sim_calc.IouSimilarity()
+    similarity_calc = sim_calc.IouAndClassSimilarity()
     matcher = hungarian_matcher.HungarianBipartiteMatcher()
     box_coder_instance = detr_box_coder.DETRBoxCoder()
 
