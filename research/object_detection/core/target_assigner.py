@@ -462,7 +462,7 @@ def create_target_assigner(reference, stage=None,
   elif reference == 'DETR':
     similarity_calc = sim_calc.IouSimilarity()
     matcher = hungarian_matcher.HungarianBipartiteMatcher()
-    box_coder_instance = mean_stddev_box_coder.MeanStddevBoxCoder()
+    box_coder_instance = hungarian_matcher.HungarianBipartiteMatcher()
 
   else:
     raise ValueError('No valid combination of reference and stage.')
