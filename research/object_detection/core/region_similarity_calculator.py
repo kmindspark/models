@@ -96,9 +96,9 @@ class IouAndClassSimilarity(RegionSimilarityCalculator):
     """
     pass
   
-  def _compare(self, boxlist1, boxlist2, gt_labels, um_labels):
-    if () 
-    box_list_ops.iou(boxlist1, boxlist2)
+  #def _compare(self, boxlist1, boxlist2, gt_labels, um_labels):
+    #if () 
+    #box_list_ops.iou(boxlist1, boxlist2)
 
 
 class NegSqDistSimilarity(RegionSimilarityCalculator):
