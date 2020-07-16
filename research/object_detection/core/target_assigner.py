@@ -540,12 +540,13 @@ def batch_assign(target_assigner,
   match_list = []
   if gt_weights_batch is None:
     gt_weights_batch = [None] * len(gt_class_targets_batch)
-  for anchors, gt_boxes, gt_class_targets, gt_weights in zip(
-      anchors_batch, gt_box_batch, gt_class_targets_batch, gt_weights_batch):
+  for anchors, gt_boxes, gt_class_targets, gt_weights, class_preds in zip(
+      anchors_batch, gt_box_batch, gt_class_targets_batch, gt_weights_batch,
+      class_predictions):
     (cls_targets, cls_weights,
      reg_targets, reg_weights, match) = target_assigner.assign(
          anchors, gt_boxes, gt_class_targets, unmatched_class_label, gt_weights,
-         class_predictions)
+         class_preds)
     cls_targets_list.append(cls_targets)
     cls_weights_list.append(cls_weights)
     reg_targets_list.append(reg_targets)
