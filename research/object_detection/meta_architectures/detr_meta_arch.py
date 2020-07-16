@@ -363,8 +363,8 @@ class DETRMetaArch(model.DetectionModel):
             fields.InputDataFields.is_annotated))
 
       print("NEWPRINT")
-      print(reshaped_refined_box_encodings)
-      print(batch_reg_targets)
+      #print(reshaped_refined_box_encodings)
+      #print(batch_reg_targets)
       second_stage_loc_losses = self._localization_loss(
           reshaped_refined_box_encodings,
           batch_reg_targets,
