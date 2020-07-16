@@ -290,10 +290,10 @@ class TargetAssigner(object):
     #print(matched_gt_boxlist.data['boxes'])
     #print(matched_gt_boxlist.get_center_coordinates_and_sizes())
     a, b, c, d = matched_gt_boxlist.get_center_coordinates_and_sizes()
-    print(c)
-    print(tf.log(c))
+    #print(c)
+    #print(tf.log(c))
     matched_reg_targets = self._box_coder.encode(matched_gt_boxlist, anchors)
-    print(matched_reg_targets)
+    #print(matched_reg_targets)
     match_results_shape = shape_utils.combined_static_and_dynamic_shape(
         match.match_results)
 
