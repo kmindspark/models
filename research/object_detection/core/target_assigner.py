@@ -207,7 +207,7 @@ class TargetAssigner(object):
       #tf.print(anchors.data['boxes'].shape)
       #tf.print(groundtruth_boxes.data['boxes'])
       #tf.print(groundtruth_boxes.data['boxes'].shape)
-      tf.print(groundtruth_weights)
+      tf.print(groundtruth_labels)
       
       match_quality_matrix = self._similarity_calc.compare(groundtruth_boxes,
                                                            anchors)#, gt_labels=groundtruth_labels,
