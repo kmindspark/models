@@ -78,6 +78,8 @@ class DETRBoxCoder(box_coder.BoxCoder):
     ty = (ycenter)
     tw = tf.log(w)
     th = tf.log(h)
+
+    print("Logs", tw)
     
     return tf.transpose(tf.stack([ty, tx, th, tw]))
 
