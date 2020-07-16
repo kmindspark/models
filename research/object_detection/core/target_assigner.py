@@ -209,8 +209,9 @@ class TargetAssigner(object):
       #tf.print(groundtruth_boxes.data['boxes'].shape)
       
       match_quality_matrix = self._similarity_calc.compare(groundtruth_boxes,
-                                                           anchors, gt_labels=groundtruth_labels,
-                                                           um_labels=unmatched_class_label)
+                                                           anchors,
+                                                           groundtruth_labels=groundtruth_labels,
+                                                           unmatched_labels=unmatched_class_label)
       #print(match_quality_matrix)                                                     
       match = self._matcher.match(match_quality_matrix,
                                   valid_rows=tf.greater(groundtruth_weights, 0))
