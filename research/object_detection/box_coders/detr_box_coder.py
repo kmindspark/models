@@ -74,10 +74,10 @@ class DETRBoxCoder(box_coder.BoxCoder):
     h += EPSILON
     w += EPSILON
 
-    tx = (xcenter)
-    ty = (ycenter)
-    tw = tf.log(w)
-    th = tf.log(h)
+    tx = xcenter
+    ty = ycenter
+    tw = w #tf.log(w)
+    th = h #tf.log(h)
     
     return tf.transpose(tf.stack([ty, tx, th, tw]))
 
