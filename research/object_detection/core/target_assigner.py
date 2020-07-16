@@ -442,6 +442,7 @@ def create_target_assigner(reference, stage=None,
         scale_factors=[10.0, 10.0, 5.0, 5.0])
 
   elif reference == 'FasterRCNN' and stage == 'detection':
+    print("WRONG PLACE")
     similarity_calc = sim_calc.IouSimilarity()
     # Uses all proposals with IOU < 0.5 as candidate negatives.
     matcher = argmax_matcher.ArgMaxMatcher(matched_threshold=0.5,

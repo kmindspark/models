@@ -777,7 +777,7 @@ def detr_builder(is_training, add_summaries, frcnn_config):
       frcnn_config.first_stage_anchor_generator)
 
   first_stage_target_assigner = target_assigner.create_target_assigner(
-      'DETR',
+      'FasterRCNN',
       'proposal',
       use_matmul_gather=frcnn_config.use_matmul_gather_in_matcher)
   first_stage_atrous_rate = frcnn_config.first_stage_atrous_rate
@@ -824,7 +824,7 @@ def detr_builder(is_training, add_summaries, frcnn_config):
   maxpool_stride = frcnn_config.maxpool_stride
 
   second_stage_target_assigner = target_assigner.create_target_assigner(
-      'DETR',
+      'FasterRCNN',
       'detection',
       use_matmul_gather=frcnn_config.use_matmul_gather_in_matcher)
   if is_keras:
