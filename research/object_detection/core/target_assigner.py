@@ -110,7 +110,8 @@ class TargetAssigner(object):
              groundtruth_boxes,
              groundtruth_labels=None,
              unmatched_class_label=None,
-             groundtruth_weights=None):
+             groundtruth_weights=None,
+             class_predictions=None):
     """Assign classification and regression targets to each anchor.
 
     For a given set of anchors and groundtruth detections, match anchors
@@ -211,7 +212,7 @@ class TargetAssigner(object):
       match_quality_matrix = self._similarity_calc.compare(groundtruth_boxes,
                                                            anchors,
                                                            groundtruth_labels=groundtruth_labels,
-                                                           unmatched_labels=unmatched_class_label)
+                                                           predicted_labels=class_predictions)
       #print(match_quality_matrix)                                                     
       match = self._matcher.match(match_quality_matrix,
                                   valid_rows=tf.greater(groundtruth_weights, 0))
@@ -478,7 +479,8 @@ def batch_assign(target_assigner,
                  gt_box_batch,
                  gt_class_targets_batch,
                  unmatched_class_label=None,
-                 gt_weights_batch=None):
+                 gt_weights_batch=None,
+                 class_predictions=None):
   """Batched assignment of classification and regression targets.
 
   Args:
@@ -542,7 +544,8 @@ def batch_assign(target_assigner,
       anchors_batch, gt_box_batch, gt_class_targets_batch, gt_weights_batch):
     (cls_targets, cls_weights,
      reg_targets, reg_weights, match) = target_assigner.assign(
-         anchors, gt_boxes, gt_class_targets, unmatched_class_label, gt_weights)
+         anchors, gt_boxes, gt_class_targets, unmatched_class_label, gt_weights,
+         class_predictions)
     cls_targets_list.append(cls_targets)
     cls_weights_list.append(cls_weights)
     reg_targets_list.append(reg_targets)

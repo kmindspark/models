@@ -329,7 +329,8 @@ class DETRMetaArch(model.DetectionModel):
            gt_class_targets_batch=groundtruth_classes_with_background_list,
            unmatched_class_label=tf.constant(
                [1] + self._num_classes * [0], dtype=tf.float32),
-           gt_weights_batch=groundtruth_weights_list)
+           gt_weights_batch=groundtruth_weights_list,
+           class_predictions=class_predictions_with_background)
 
       class_predictions_with_background = tf.reshape(
           class_predictions_with_background,
