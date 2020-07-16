@@ -96,7 +96,6 @@ class IouAndClassSimilarity(RegionSimilarityCalculator):
       A tensor with shape [N, M] representing pairwise iou scores.
     """
     classification_scores = tf.matmul(groundtruth_labels, predicted_labels, transpose_b=True)
-    print(classification_scores)
     return box_list_ops.iou(boxlist1, boxlist2) - tf.log(tf.math.add(classification_scores, EPSILON))
 
 class NegSqDistSimilarity(RegionSimilarityCalculator):

@@ -97,18 +97,16 @@ class DETRMetaArch(model.DetectionModel):
 
   def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
     image_shape = tf.shape(preprocessed_inputs)
-    #print(preprocessed_inputs)
     x = self.first_stage(preprocessed_inputs)
-    #print(x)
     x = tf.reshape(x, [x.shape[0], x.shape[1] * x.shape[2], x.shape[3]])
     x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)])
     #x = tf.reshape(x, [x.shape[0], ])
     #x = self.ffn(x)
     bboxes_encoded, logits = self.bboxes(x), self.cls_activation(self.cls(x))
-    print(bboxes_encoded)
-    #bboxes_encoded = tf.keras.backend.sigmoid(bboxes_encoded)
-    #bboxes_encoded = ops.normalized_to_image_coordinates(
-    #    bboxes_encoded, image_shape, self._parallel_iterations)
+    bboxes_encoded = tf.keras.backend.sigmoid(bboxes_encoded)
+    bboxes_encoded = ops.normalized_to_image_coordinates(
+        bboxes_encoded, image_shape, self._parallel_iterations)
+    bboxes_encoded = self._box_coder.encode(bboxes_encoded, None)
     #print(bboxes_encoded)
     reshaped_bboxes = tf.reshape(bboxes_encoded, [bboxes_encoded.shape[0] * bboxes_encoded.shape[1], 1, bboxes_encoded.shape[2]])
     batches_queries = tf.repeat(tf.expand_dims(self.num_queries, 0), x.shape[0], axis=0)
