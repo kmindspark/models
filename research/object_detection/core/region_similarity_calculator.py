@@ -78,6 +78,28 @@ class IouSimilarity(RegionSimilarityCalculator):
     """
     return box_list_ops.iou(boxlist1, boxlist2)
 
+class IouAndClassSimilarity(RegionSimilarityCalculator):
+  """Class to compute similarity based on Intersection over Union (IOU) metric.
+
+  This class computes pairwise similarity between two BoxLists based on IOU.
+  """
+
+  def _compare(self, boxlist1, boxlist2):
+    """Compute pairwise IOU similarity between the two BoxLists.
+
+    Args:
+      boxlist1: BoxList holding N boxes.
+      boxlist2: BoxList holding M boxes.
+
+    Returns:
+      A tensor with shape [N, M] representing pairwise iou scores.
+    """
+    pass
+  
+  def _compare(self, boxlist1, boxlist2, gt_labels, um_labels):
+    if () 
+    box_list_ops.iou(boxlist1, boxlist2)
+
 
 class NegSqDistSimilarity(RegionSimilarityCalculator):
   """Class to compute similarity based on the squared distance metric.
