@@ -86,6 +86,7 @@ class DETRMetaArch(model.DetectionModel):
     self._box_coder = self.target_assigner.get_box_coder()
     self._parallel_iterations = parallel_iterations
     self._post_filter = tf.keras.layers.Conv2D(128, 1)
+    self._second_stage_nms_fn = second_stage_non_max_suppression_fn
 
   @property
   def first_stage_feature_extractor_scope(self):
@@ -426,7 +427,7 @@ class DETRMetaArch(model.DetectionModel):
     then scores are remapped (and may thus have a different interpretation).
 
     If number_of_stages=1, the returned results represent proposals from the
-    first stage RPN and are padded to have self.max_num_proposals for each
+    first stage RPN and are padded to have self.num_queries for each
     image; otherwise, the results can be interpreted as multiclass detections
     from the full two-stage model and are padded to self._max_detections.
 
@@ -639,7 +640,7 @@ class DETRMetaArch(model.DetectionModel):
         predictions (logits) for each of the proposals.  Note that this tensor
         *includes* background class predictions (at class index 0).
       proposal_boxes: a 3-D float tensor with shape
-        [batch_size, self.max_num_proposals, 4] representing decoded proposal
+        [batch_size, self.num_queries, 4] representing decoded proposal
         bounding boxes in absolute coordinates.
       num_proposals: a 1-D int32 tensor of shape [batch] representing the number
         of proposals predicted for each image in the batch.
@@ -676,22 +677,22 @@ class DETRMetaArch(model.DetectionModel):
     refined_box_encodings_batch = tf.reshape(
         refined_box_encodings,
         [-1,
-        self.max_num_proposals,
+        self.num_queries,
         refined_box_encodings.shape[1],
         self._box_coder.code_size])
     class_predictions_with_background_batch = tf.reshape(
         class_predictions_with_background,
-        [-1, self.max_num_proposals, self.num_classes + 1]
+        [-1, self.num_queries, self.num_classes + 1]
     )
     refined_decoded_boxes_batch = self._batch_decode_boxes(
         refined_box_encodings_batch, proposal_boxes)
-    class_predictions_with_background_batch_normalized = (
-        self._second_stage_score_conversion_fn(
-            class_predictions_with_background_batch))
+    class_predictions_with_background_batch_normalized = class_predictions_with_background_batch #(
+        #self._second_stage_score_conversion_fn(
+        #    class_predictions_with_background_batch))
     class_predictions_batch = tf.reshape(
         tf.slice(class_predictions_with_background_batch_normalized,
                 [0, 0, 1], [-1, -1, -1]),
-        [-1, self.max_num_proposals, self.num_classes])
+        [-1, self.num_queries, self.num_classes])
     clip_window = self._compute_clip_window(image_shapes)
     mask_predictions_batch = None
     if mask_predictions is not None:
@@ -699,13 +700,13 @@ class DETRMetaArch(model.DetectionModel):
       mask_width = shape_utils.get_dim_as_int(mask_predictions.shape[3])
       mask_predictions = tf.sigmoid(mask_predictions)
       mask_predictions_batch = tf.reshape(
-          mask_predictions, [-1, self.max_num_proposals,
+          mask_predictions, [-1, self.num_queries,
                             self.num_classes, mask_height, mask_width])
 
     batch_size = shape_utils.combined_static_and_dynamic_shape(
         refined_box_encodings_batch)[0]
     batch_anchor_indices = tf.tile(
-        tf.expand_dims(tf.range(self.max_num_proposals), 0),
+        tf.expand_dims(tf.range(self.num_queries), 0),
         multiples=[batch_size, 1])
     additional_fields = {
         'multiclass_scores': class_predictions_with_background_batch_normalized,
@@ -780,3 +781,62 @@ class DETRMetaArch(model.DetectionModel):
             var_name = variable.op.name.replace(scope_name + '/', '')
             variables_to_restore[var_name] = variable
       return variables_to_restore
+
+  def _batch_decode_boxes(self, box_encodings, anchor_boxes):
+    """Decodes box encodings with respect to the anchor boxes.
+
+    Args:
+      box_encodings: a 4-D tensor with shape
+        [batch_size, num_anchors, num_classes, self._box_coder.code_size]
+        representing box encodings.
+      anchor_boxes: [batch_size, num_anchors, self._box_coder.code_size]
+        representing decoded bounding boxes. If using a shared box across
+        classes the shape will instead be
+        [total_num_proposals, 1, self._box_coder.code_size].
+
+    Returns:
+      decoded_boxes: a
+        [batch_size, num_anchors, num_classes, self._box_coder.code_size]
+        float tensor representing bounding box predictions (for each image in
+        batch, proposal and class). If using a shared box across classes the
+        shape will instead be
+        [batch_size, num_anchors, 1, self._box_coder.code_size].
+    """
+    combined_shape = shape_utils.combined_static_and_dynamic_shape(
+        box_encodings)
+    num_classes = combined_shape[2]
+    tiled_anchor_boxes = tf.tile(
+        tf.expand_dims(anchor_boxes, 2), [1, 1, num_classes, 1])
+    tiled_anchors_boxlist = box_list.BoxList(
+        tf.reshape(tiled_anchor_boxes, [-1, 4]))
+    decoded_boxes = self._box_coder.decode(
+        tf.reshape(box_encodings, [-1, self._box_coder.code_size]),
+        tiled_anchors_boxlist)
+    return tf.reshape(decoded_boxes.get(),
+                      tf.stack([combined_shape[0], combined_shape[1],
+                                num_classes, 4]))
+
+  def _compute_clip_window(self, image_shapes):
+    """Computes clip window for non max suppression based on image shapes.
+
+    This function assumes that the clip window's left top corner is at (0, 0).
+
+    Args:
+      image_shapes: A 2-D int32 tensor of shape [batch_size, 3] containing
+      shapes of images in the batch. Each row represents [height, width,
+      channels] of an image.
+
+    Returns:
+      A 2-D float32 tensor of shape [batch_size, 4] containing the clip window
+      for each image in the form [ymin, xmin, ymax, xmax].
+    """
+    clip_heights = image_shapes[:, 0]
+    clip_widths = image_shapes[:, 1]
+    clip_window = tf.cast(
+        tf.stack([
+            tf.zeros_like(clip_heights),
+            tf.zeros_like(clip_heights), clip_heights, clip_widths
+        ],
+                 axis=1),
+        dtype=tf.float32)
+    return clip_window
