@@ -542,11 +542,10 @@ def batch_assign(target_assigner,
     gt_weights_batch = [None] * len(gt_class_targets_batch)
   #print(class_predictions)
   #print(gt_class_targets_batch)
+  class_predictions = tf.unstack(class_predictions)
   for anchors, gt_boxes, gt_class_targets, gt_weights, class_preds in zip(
       anchors_batch, gt_box_batch, gt_class_targets_batch, gt_weights_batch,
       class_predictions):
-    print("class preds")
-    print(class_preds)
     (cls_targets, cls_weights,
      reg_targets, reg_weights, match) = target_assigner.assign(
          anchors, gt_boxes, gt_class_targets, unmatched_class_label, gt_weights,
