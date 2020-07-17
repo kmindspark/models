@@ -75,7 +75,7 @@ class DETRMetaArch(model.DetectionModel):
       "num_hidden_layers": 4, "filter_size": 128, "relu_dropout": 0}
     self.transformer = detr_transformer.Transformer(self.transformer_args)
     #self.ffn = self.feature_extractor.get_box_classifier_feature_extractor_model()
-    self.bboxes = tf.keras.layers.Dense(4)
+    #self.bboxes = tf.keras.layers.Dense(4)
     self.cls = tf.keras.layers.Dense(num_classes + 1, activation="sigmoid")
     self.cls_activation = tf.keras.layers.Softmax()
     self.queries = tf.keras.backend.variable(tf.random.uniform([self.num_queries, self.hidden_dimension]))
@@ -87,6 +87,8 @@ class DETRMetaArch(model.DetectionModel):
     self._parallel_iterations = parallel_iterations
     self._post_filter = tf.keras.layers.Conv2D(128, 1)
     self._second_stage_nms_fn = second_stage_non_max_suppression_fn
+    self._box_ffn = tf.keras.Sequential(layers=[layers.Dense(self.hidden_dimension, activaion="relu"),
+                                                layers.Dense(4, activation="sigmoid")])
 
   @property
   def first_stage_feature_extractor_scope(self):
@@ -105,7 +107,7 @@ class DETRMetaArch(model.DetectionModel):
     #x = tf.reshape(x, [x.shape[0], ])
     #x = self.ffn(x)
     bboxes_encoded, logits = self.bboxes(x), self.cls_activation(self.cls(x))
-    bboxes_encoded = tf.keras.backend.sigmoid(bboxes_encoded)
+    bboxes_encoded = self._bbox_ffn(bboxes_encoded) #tf.keras.backend.sigmoid(bboxes_encoded)
     bboxes_encoded = ops.normalized_to_image_coordinates(
         bboxes_encoded, image_shape, self._parallel_iterations)
     #print(bboxes_encoded)
@@ -463,14 +465,12 @@ class DETRMetaArch(model.DetectionModel):
         rpn_features_to_crop is not in the prediction_dict.
     """
     with tf.name_scope('SecondStagePostprocessor'):
-      mask_predictions = prediction_dict.get(box_predictor.MASK_PREDICTIONS)
       detections_dict = self._postprocess_box_classifier(
           prediction_dict['refined_box_encodings'],
           prediction_dict['class_predictions_with_background'],
           prediction_dict['proposal_boxes'],
           prediction_dict['num_proposals'],
-          true_image_shapes,
-          mask_predictions=mask_predictions)
+          true_image_shapes))
 
     return detections_dict
 
