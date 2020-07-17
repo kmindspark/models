@@ -303,10 +303,10 @@ def iou(boxlist1, boxlist2, scope=None):
         tf.equal(intersections, 0.0),
         tf.zeros_like(intersections), tf.truediv(intersections, unions))
 
-  def l1(boxlist1, boxlist2):
-    ycenter1, xcenter1, height1, width1 = boxlist1.get_center_coordinates_and_sizes()
-    ycenter2, xcenter2, height2, width2 = boxlist1.get_center_coordinates_and_sizes()
-    return abs(ycenter1 - ycenter2) + abs(xcenter1 - xcenter2) + abs(width1 - width2) + abs(height1 - height2)
+def l1(boxlist1, boxlist2):
+  ycenter1, xcenter1, height1, width1 = boxlist1.get_center_coordinates_and_sizes()
+  ycenter2, xcenter2, height2, width2 = boxlist1.get_center_coordinates_and_sizes()
+  return abs(ycenter1 - ycenter2) + abs(xcenter1 - xcenter2) + abs(width1 - width2) + abs(height1 - height2)
 
 def matched_iou(boxlist1, boxlist2, scope=None):
   """Compute intersection-over-union between corresponding boxes in boxlists.
