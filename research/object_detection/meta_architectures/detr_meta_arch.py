@@ -109,10 +109,13 @@ class DETRMetaArch(model.DetectionModel):
 
     fake_logits = np.zeros((91))
     fake_logits[5] = 1
+    fake_logits = np.repeat(fake_logits, axis=0)
     logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
+    logits = tf.expand_dims(logits, axis=0)
+    print(logits)
     #bboxes_encoded = self._bbox_ffn(bboxes_encoded) #tf.keras.backend.sigmoid(bboxes_encoded)
-    bboxes_encoded = ops.normalized_to_image_coordinates(
-        bboxes_encoded, image_shape, self._parallel_iterations)
+    #bboxes_encoded = ops.normalized_to_image_coordinates(
+    #    bboxes_encoded, image_shape, self._parallel_iterations)
     print(bboxes_encoded)
     print(logits)
     print(self.queries)
@@ -386,8 +389,6 @@ class DETRMetaArch(model.DetectionModel):
               losses_mask=losses_mask),
           ndims=2) / normalizer
 
-      #tf.print(second_stage_cls_losses)
-
       second_stage_loc_loss = tf.reduce_sum(
           second_stage_loc_losses * tf.cast(paddings_indicator,
                                             dtype=tf.float32))
@@ -509,8 +510,9 @@ class DETRMetaArch(model.DetectionModel):
     """
     # pylint: disable=g-complex-comprehension
     groundtruth_boxlists = [
-        box_list_ops.to_absolute_coordinates(
-            box_list.BoxList(boxes), image_shapes[i, 0], image_shapes[i, 1])
+        #box_list_ops.to_absolute_coordinates(
+        #    box_list.BoxList(boxes), image_shapes[i, 0], image_shapes[i, 1])
+        box_list.BoxList(boxes)
         for i, boxes in enumerate(
             self.groundtruth_lists(fields.BoxListFields.boxes))
     ]
@@ -521,34 +523,6 @@ class DETRMetaArch(model.DetectionModel):
           tf.cast(
               tf.pad(one_hot_encoding, [[0, 0], [1, 0]], mode='CONSTANT'),
               dtype=tf.float32))
-
-    groundtruth_masks_list = self._groundtruth_lists.get(
-        fields.BoxListFields.masks)
-    # TODO(rathodv): Remove mask resizing once the legacy pipeline is deleted.
-    if groundtruth_masks_list is not None and self._resize_masks:
-      resized_masks_list = []
-      for mask in groundtruth_masks_list:
-
-        _, resized_mask, _ = self._image_resizer_fn(
-            # Reuse the given `image_resizer_fn` to resize groundtruth masks.
-            # `mask` tensor for an image is of the shape [num_masks,
-            # image_height, image_width]. Below we create a dummy image of the
-            # the shape [image_height, image_width, 1] to use with
-            # `image_resizer_fn`.
-            image=tf.zeros(tf.stack([tf.shape(mask)[1],
-                                      tf.shape(mask)[2], 1])),
-            masks=mask)
-        resized_masks_list.append(resized_mask)
-
-      groundtruth_masks_list = resized_masks_list
-    # Masks could be set to bfloat16 in the input pipeline for performance
-    # reasons. Convert masks back to floating point space here since the rest of
-    # this module assumes groundtruth to be of float32 type.
-    float_groundtruth_masks_list = []
-    if groundtruth_masks_list:
-      for mask in groundtruth_masks_list:
-        float_groundtruth_masks_list.append(tf.cast(mask, tf.float32))
-      groundtruth_masks_list = float_groundtruth_masks_list
 
     if self.groundtruth_has_field(fields.BoxListFields.weights):
       groundtruth_weights_list = self.groundtruth_lists(
@@ -562,7 +536,7 @@ class DETRMetaArch(model.DetectionModel):
         groundtruth_weights_list.append(groundtruth_weights)
 
     return (groundtruth_boxlists, groundtruth_classes_with_background_list,
-            groundtruth_masks_list, groundtruth_weights_list)
+            None, groundtruth_weights_list)
 
   def _image_batch_shape_2d(self, image_batch_shape_1d):
     """Takes a 1-D image batch shape tensor and converts it to a 2-D tensor.

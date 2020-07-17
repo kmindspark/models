@@ -627,7 +627,7 @@ def train_loop(
               'steps_per_sec', num_steps_per_iteration * 1.0 / time_taken,
               step=global_step)
 
-          if global_step.value() - logged_step >= 100:
+          if global_step.value() - logged_step >= 20:
             tf.logging.info(
                 'Step {} per-step time {:.3f}s loss={:.3f}'.format(
                     global_step.value(), time_taken / num_steps_per_iteration,
