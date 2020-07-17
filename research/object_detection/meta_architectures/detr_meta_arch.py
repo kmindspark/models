@@ -109,7 +109,7 @@ class DETRMetaArch(model.DetectionModel):
 
     fake_logits = np.zeros((91))
     fake_logits[5] = 1
-    fake_logits = np.repeat(fake_logits, axis=0)
+    fake_logits = np.repeat(fake_logits, axis=0, repeats=100)
     logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
     logits = tf.expand_dims(logits, axis=0)
     print(logits)
