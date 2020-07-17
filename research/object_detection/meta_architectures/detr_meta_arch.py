@@ -840,3 +840,32 @@ class DETRMetaArch(model.DetectionModel):
                  axis=1),
         dtype=tf.float32)
     return clip_window
+
+  def _normalize_and_clip_boxes(self, boxes_and_image_shape):
+    """Normalize and clip boxes."""
+    boxes_per_image = boxes_and_image_shape[0]
+    image_shape = boxes_and_image_shape[1]
+
+    boxes_contains_classes_dim = boxes_per_image.shape.ndims == 3
+    if boxes_contains_classes_dim:
+      boxes_per_image = shape_utils.flatten_first_n_dimensions(
+          boxes_per_image, 2)
+    normalized_boxes_per_image = box_list_ops.to_normalized_coordinates(
+        box_list.BoxList(boxes_per_image),
+        image_shape[0],
+        image_shape[1],
+        check_range=False).get()
+
+    normalized_boxes_per_image = box_list_ops.clip_to_window(
+        box_list.BoxList(normalized_boxes_per_image),
+        tf.constant([0.0, 0.0, 1.0, 1.0], tf.float32),
+        filter_nonoverlapping=False).get()
+
+    if boxes_contains_classes_dim:
+      max_num_proposals, num_classes, _ = (
+          shape_utils.combined_static_and_dynamic_shape(
+              boxes_and_image_shape[0]))
+      normalized_boxes_per_image = shape_utils.expand_first_dimension(
+          normalized_boxes_per_image, [max_num_proposals, num_classes])
+
+    return normalized_boxes_per_image
