@@ -469,7 +469,7 @@ class DETRMetaArch(model.DetectionModel):
           prediction_dict['class_predictions_with_background'],
           prediction_dict['proposal_boxes'],
           prediction_dict['num_proposals'],
-          true_image_shapes))
+          true_image_shapes)
 
     return detections_dict
 
