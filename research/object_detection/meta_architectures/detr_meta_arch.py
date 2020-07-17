@@ -87,7 +87,7 @@ class DETRMetaArch(model.DetectionModel):
     self._parallel_iterations = parallel_iterations
     self._post_filter = tf.keras.layers.Conv2D(128, 1)
     self._second_stage_nms_fn = second_stage_non_max_suppression_fn
-    self._box_ffn = tf.keras.Sequential(layers=[tf.keras.layers.Dense(self.hidden_dimension, activaion="relu"),
+    self._box_ffn = tf.keras.Sequential(layers=[tf.keras.layers.Dense(self.hidden_dimension, activation="relu"),
                                                 tf.keras.layers.Dense(4, activation="sigmoid")])
   @property
   def first_stage_feature_extractor_scope(self):
