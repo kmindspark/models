@@ -74,7 +74,7 @@ class DETRMetaArch(model.DetectionModel):
       layer.trainable = False
     self.target_assigner = target_assigner.create_target_assigner('DETR', 'detection')
     self.transformer_args = {"hidden_size": self.hidden_dimension, "attention_dropout": 0, "num_heads": 8, "layer_postprocess_dropout": 0, "dtype": tf.float32, 
-      "num_hidden_layers": 6, "filter_size": 128, "relu_dropout": 0}
+      "num_hidden_layers": 4, "filter_size": 128, "relu_dropout": 0}
     self.transformer = detr_transformer.Transformer(self.transformer_args)
     #self.ffn = self.feature_extractor.get_box_classifier_feature_extractor_model()
     #self.bboxes = tf.keras.layers.Dense(4)
@@ -106,6 +106,10 @@ class DETRMetaArch(model.DetectionModel):
     x = tf.reshape(x, [x.shape[0], x.shape[1] * x.shape[2], x.shape[3]])
     x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)])
     bboxes_encoded, logits = self._box_ffn(x), self.cls_activation(self.cls(x))
+
+    fake_logits = np.zeros((91))
+    fake_logits[5] = 1
+    logits = tf.convert_to_tensor(fake_logits)
     #bboxes_encoded = self._bbox_ffn(bboxes_encoded) #tf.keras.backend.sigmoid(bboxes_encoded)
     bboxes_encoded = ops.normalized_to_image_coordinates(
         bboxes_encoded, image_shape, self._parallel_iterations)
