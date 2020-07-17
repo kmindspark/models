@@ -70,7 +70,8 @@ class DETRMetaArch(model.DetectionModel):
     self.hidden_dimension = 128
     self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=False)
     self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()
-    self.first_stage.trainable = False
+    for l in self.first_stage.layers:
+      layer.trainable = False
     self.target_assigner = target_assigner.create_target_assigner('DETR', 'detection')
     self.transformer_args = {"hidden_size": self.hidden_dimension, "attention_dropout": 0, "num_heads": 8, "layer_postprocess_dropout": 0, "dtype": tf.float32, 
       "num_hidden_layers": 4, "filter_size": 128, "relu_dropout": 0}
