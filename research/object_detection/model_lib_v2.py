@@ -706,7 +706,7 @@ def eager_eval_loop(
   evaluators = None
   loss_metrics = {}
 
-  @tf.function
+  #@tf.function
   def compute_eval_dict(features, labels):
     """Compute the evaluation result on an image."""
     # For evaling on train data, it is necessary to check whether groundtruth
