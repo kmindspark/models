@@ -78,7 +78,7 @@ class DETRMetaArch(model.DetectionModel):
     #self.bboxes = tf.keras.layers.Dense(4)
     self.cls = tf.keras.layers.Dense(num_classes + 1, activation="sigmoid")
     self.cls_activation = tf.keras.layers.Softmax()
-    self.queries = tf.keras.backend.variable(tf.random.uniform([self.num_queries, self.hidden_dimension]))
+    self.queries = tf.Variable(initial_value=tf.zeros((self.num_queries, self.hidden_dimension), trainable=True)#tf.keras.backend.variable(tf.random.uniform([self.num_queries, self.hidden_dimension]))
     self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
     self._classification_loss = losses.WeightedSoftmaxClassificationLoss()
     self._second_stage_loc_loss_weight = second_stage_localization_loss_weight
@@ -104,13 +104,12 @@ class DETRMetaArch(model.DetectionModel):
     x = self._post_filter(self.first_stage(preprocessed_inputs))
     x = tf.reshape(x, [x.shape[0], x.shape[1] * x.shape[2], x.shape[3]])
     x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)])
-    #x = tf.reshape(x, [x.shape[0], ])
-    #x = self.ffn(x)
     bboxes_encoded, logits = self.bboxes(x), self.cls_activation(self.cls(x))
     bboxes_encoded = self._bbox_ffn(bboxes_encoded) #tf.keras.backend.sigmoid(bboxes_encoded)
     bboxes_encoded = ops.normalized_to_image_coordinates(
         bboxes_encoded, image_shape, self._parallel_iterations)
-    #print(bboxes_encoded)
+    print(bboxes_encoded)
+    print(logits)
     reshaped_bboxes = tf.reshape(bboxes_encoded, [bboxes_encoded.shape[0] * bboxes_encoded.shape[1], 1, bboxes_encoded.shape[2]])
     batches_queries = tf.repeat(tf.expand_dims(self.num_queries, 0), x.shape[0], axis=0)
     return {
