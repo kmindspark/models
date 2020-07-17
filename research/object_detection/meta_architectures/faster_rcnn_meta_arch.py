@@ -591,7 +591,7 @@ class FasterRCNNMetaArch(model.DetectionModel):
     self._second_stage_sampler = second_stage_sampler
 
     self._second_stage_nms_fn = second_stage_non_max_suppression_fn
-    self. = second_stage_score_conversion_fn
+    self._second_stage_score_conversion_fn = second_stage_score_conversion_fn
 
     self._second_stage_localization_loss = (
         losses.WeightedSmoothL1LocalizationLoss())
