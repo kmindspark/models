@@ -540,6 +540,7 @@ def batch_assign(target_assigner,
   match_list = []
   if gt_weights_batch is None:
     gt_weights_batch = [None] * len(gt_class_targets_batch)
+  print(class_predictions)
   for anchors, gt_boxes, gt_class_targets, gt_weights, class_preds in zip(
       anchors_batch, gt_box_batch, gt_class_targets_batch, gt_weights_batch,
       class_predictions):
