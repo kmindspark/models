@@ -385,8 +385,9 @@ class DETRMetaArch(model.DetectionModel):
           self._box_coder.decode(tf.reshape(batch_reg_targets, [-1, 4]), None),
           weights=batch_reg_weights,
           losses_mask=losses_mask)
-      print(second_stage_loc_losses.shape)
-      print(my_loc_loss.shape)
+      my_loc_loss = tf.reshape([reshaped_refined_box_encodings.shape[0], reshaped_refined_box_encodings.shape[1]])
+      #print(second_stage_loc_losses.shape)
+      #print(my_loc_loss.shape)
       second_stage_loc_losses += 5 * my_loc_loss/normalizer
       second_stage_cls_losses = ops.reduce_sum_trailing_dimensions(
           self._classification_loss(
