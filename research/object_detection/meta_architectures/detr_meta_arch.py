@@ -375,16 +375,17 @@ class DETRMetaArch(model.DetectionModel):
       #print("NEWPRINT")
       #print(reshaped_refined_box_encodings)
       #print(batch_reg_targets)
-      second_stage_loc_losses = self._localization_loss(
+      second_stage_loc_losses = 2 * self._localization_loss(
           reshaped_refined_box_encodings,
           batch_reg_targets,
           weights=batch_reg_weights,
           losses_mask=losses_mask) / normalizer
-      second_stage_loc_losses += self._localization_loss_iou(
+      my_loc_loss = self._localization_loss_iou(
           reshaped_refined_box_encodings,
           batch_reg_targets,
           weights=batch_reg_weights,
           losses_mask=losses_mask) / normalizer
+      second_stage_loc_losses += 5 * my_loc_loss
       second_stage_cls_losses = ops.reduce_sum_trailing_dimensions(
           self._classification_loss(
               class_predictions_with_background,
