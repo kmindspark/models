@@ -93,8 +93,8 @@ class DETRBoxCoder(box_coder.BoxCoder):
     """
     ty, tx, th, tw = tf.unstack(tf.transpose(rel_codes))
 
-    w = tf.tw
-    h = tf.th 
+    w = tw
+    h = th 
     ycenter = ty
     xcenter = tx
     ymin = ycenter - h / 2.
