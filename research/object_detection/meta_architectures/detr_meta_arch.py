@@ -676,7 +676,7 @@ class DETRMetaArch(model.DetectionModel):
     )
     refined_decoded_boxes_batch = self._batch_decode_boxes(
         refined_box_encodings_batch, proposal_boxes)
-    print(refined_box_encodings_batch)
+    print(refined_decoded_boxes_batch)
     refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(refined_decoded_boxes_batch, image_shape=orig_image_shapes)
     class_predictions_with_background_batch_normalized = class_predictions_with_background_batch #(
         #self._second_stage_score_conversion_fn(
