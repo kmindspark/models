@@ -79,7 +79,7 @@ def normalized_to_image_coordinates(normalized_boxes, image_shape,
   y_scale = tf.cast(image_shape[1], normalized_boxes.dtype)
   def _to_absolute_coordinates(normalized_boxes):
     y_min, x_min, y_max, x_max = tf.split(
-        value=normalized_boxes, num_or_size_splits=4, axis=axis)
+        value=normalized_boxes, num_or_size_splits=4, axis=1)
     y_min = y_scale * y_min
     y_max = y_scale * y_max
     x_min = x_scale * x_min
