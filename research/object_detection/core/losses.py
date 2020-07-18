@@ -202,8 +202,8 @@ class WeightedIOULocalizationLoss(Loss):
       loss: a float tensor of shape [batch_size, num_anchors] tensor
         representing the value of the loss function.
     """
-    predicted_boxes = box_list.BoxList(tf.reshape(prediction_tensor, [-1, 4]))
-    target_boxes = box_list.BoxList(tf.reshape(target_tensor, [-1, 4]))
+    predicted_boxes = prediction_tensor# box_list.BoxList(tf.reshape(prediction_tensor, [-1, 4]))
+    target_boxes = target_tensor #box_list.BoxList(tf.reshape(target_tensor, [-1, 4]))
     per_anchor_iou_loss = 1.0 - box_list_ops.matched_iou(predicted_boxes,
                                                          target_boxes)
     return tf.reshape(weights, [-1]) * per_anchor_iou_loss
