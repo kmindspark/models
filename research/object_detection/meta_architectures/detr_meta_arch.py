@@ -70,8 +70,8 @@ class DETRMetaArch(model.DetectionModel):
     self.hidden_dimension = 128
     self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=False)
     self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()
-    for layer in self.first_stage.layers:
-      layer.trainable = False
+    #for layer in self.first_stage.layers:
+    #  layer.trainable = False
     self.target_assigner = target_assigner.create_target_assigner('DETR', 'detection')
     self.transformer_args = {"hidden_size": self.hidden_dimension, "attention_dropout": 0, "num_heads": 8, "layer_postprocess_dropout": 0, "dtype": tf.float32, 
       "num_hidden_layers": 4, "filter_size": 128, "relu_dropout": 0}
@@ -677,9 +677,9 @@ class DETRMetaArch(model.DetectionModel):
     )
     refined_decoded_boxes_batch = self._batch_decode_boxes(
         refined_box_encodings_batch, proposal_boxes)
+    print(refined_decoded_boxes_batch)
     refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(tf.squeeze(refined_decoded_boxes_batch, axis=[2]), image_shape=orig_image_shapes, temp=True)
     refined_decoded_boxes_batch = tf.expand_dims(refined_decoded_boxes_batch, axis=2)
-    print(refined_decoded_boxes_batch)
     class_predictions_with_background_batch_normalized = class_predictions_with_background_batch #(
         #self._second_stage_score_conversion_fn(
         #    class_predictions_with_background_batch))
