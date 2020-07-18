@@ -385,6 +385,7 @@ class DETRMetaArch(model.DetectionModel):
           batch_reg_targets,
           weights=batch_reg_weights,
           losses_mask=losses_mask) / normalizer
+      print(my_loc_loss.shape)
       second_stage_loc_losses += 5 * my_loc_loss
       second_stage_cls_losses = ops.reduce_sum_trailing_dimensions(
           self._classification_loss(
