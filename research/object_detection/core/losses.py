@@ -36,7 +36,7 @@ import tensorflow.compat.v1 as tf
 from object_detection.core import box_list
 from object_detection.core import box_list_ops
 from object_detection.utils import ops
-
+from object_detection.box_coders import detr_box_coder
 
 class Loss(six.with_metaclass(abc.ABCMeta, object)):
   """Abstract base class for loss functions."""
@@ -179,7 +179,6 @@ class WeightedSmoothL1LocalizationLoss(Loss):
         loss_collection=None,
         reduction=tf.losses.Reduction.NONE
     ), axis=2)
-
 
 class WeightedIOULocalizationLoss(Loss):
   """IOU localization loss function.

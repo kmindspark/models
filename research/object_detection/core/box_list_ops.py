@@ -306,7 +306,11 @@ def iou(boxlist1, boxlist2, scope=None):
 def l1(boxlist1, boxlist2):
   ycenter1, xcenter1, height1, width1 = boxlist1.get_center_coordinates_and_sizes()
   ycenter2, xcenter2, height2, width2 = boxlist2.get_center_coordinates_and_sizes()
-  return abs(ycenter1 - ycenter2) + abs(xcenter1 - xcenter2) + abs(width1 - width2) + abs(height1 - height2)
+  ycenters = tf.abs(tf.expand_dims(ycenter1, axis=0) - tf.expand_dims(tf.transpose(ycenter2), axis=1))
+  xcenters = tf.abs(tf.expand_dims(xcenter1, axis=0) - tf.expand_dims(tf.transpose(xcenter2), axis=1))
+  heights = tf.abs(tf.expand_dims(height1, axis=0) - tf.expand_dims(tf.transpose(height2), axis=1))
+  widths = tf.abs(tf.expand_dims(width1, axis=0) - tf.expand_dims(tf.transpose(width2), axis=1))
+  return tf.transpose(ycenters + xcenters + heights + widths)
 
 def matched_iou(boxlist1, boxlist2, scope=None):
   """Compute intersection-over-union between corresponding boxes in boxlists.

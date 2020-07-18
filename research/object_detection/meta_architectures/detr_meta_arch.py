@@ -82,6 +82,7 @@ class DETRMetaArch(model.DetectionModel):
     self.cls_activation = tf.keras.layers.Softmax()
     self.queries = tf.Variable(initial_value=tf.zeros((self.num_queries, self.hidden_dimension)), trainable=True)#tf.keras.backend.variable(tf.random.uniform([self.num_queries, self.hidden_dimension]))
     self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
+    self._localization_loss_iou = losses.WeightedIOULocalizationLoss()
     self._classification_loss = losses.WeightedSoftmaxClassificationLoss()
     self._second_stage_loc_loss_weight = second_stage_localization_loss_weight
     self._second_stage_cls_loss_weight = second_stage_classification_loss_weight
@@ -379,6 +380,11 @@ class DETRMetaArch(model.DetectionModel):
           batch_reg_targets,
           weights=batch_reg_weights,
           losses_mask=losses_mask) / normalizer
+      second_stage_loc_losses += self._localization_loss_iou(
+          reshaped_refined_box_encodings,
+          batch_reg_targets,
+          weights=batch_reg_weights,
+          losses_mask=losses_mask) / normalizer
       second_stage_cls_losses = ops.reduce_sum_trailing_dimensions(
           self._classification_loss(
               class_predictions_with_background,
@@ -663,6 +669,7 @@ class DETRMetaArch(model.DetectionModel):
     )
     refined_decoded_boxes_batch = self._batch_decode_boxes(
         refined_box_encodings_batch, proposal_boxes)
+    refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(refined_decoded_boxes_batch)
     class_predictions_with_background_batch_normalized = class_predictions_with_background_batch #(
         #self._second_stage_score_conversion_fn(
         #    class_predictions_with_background_batch))
@@ -672,13 +679,6 @@ class DETRMetaArch(model.DetectionModel):
         [-1, self.num_queries, self.num_classes])
     clip_window = self._compute_clip_window(image_shapes)
     mask_predictions_batch = None
-    if mask_predictions is not None:
-      mask_height = shape_utils.get_dim_as_int(mask_predictions.shape[2])
-      mask_width = shape_utils.get_dim_as_int(mask_predictions.shape[3])
-      mask_predictions = tf.sigmoid(mask_predictions)
-      mask_predictions_batch = tf.reshape(
-          mask_predictions, [-1, self.num_queries,
-                            self.num_classes, mask_height, mask_width])
 
     batch_size = shape_utils.combined_static_and_dynamic_shape(
         refined_box_encodings_batch)[0]
@@ -731,8 +731,6 @@ class DETRMetaArch(model.DetectionModel):
         fields.DetectionResultFields.raw_detection_scores:
             class_predictions_with_background_batch_normalized
     }
-    if nmsed_masks is not None:
-      detections[fields.DetectionResultFields.detection_masks] = nmsed_masks
     return detections
 
   def restore_from_classification_checkpoint_fn(
