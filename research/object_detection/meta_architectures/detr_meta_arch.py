@@ -673,7 +673,7 @@ class DETRMetaArch(model.DetectionModel):
     )
     refined_decoded_boxes_batch = self._batch_decode_boxes(
         refined_box_encodings_batch, proposal_boxes)
-    refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(refined_decoded_boxes_batch, image_shape=tf.concat(tf.constant(image_shapes.shape[0]), tf.gather_nd(image_shapes, [[1], [2], [3]])))
+    refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(refined_decoded_boxes_batch, image_shape=tf.concat(tf.constant(image_shapes.shape[0]), tf.gather_nd(image_shapes, [[0, 1], [0, 2], [0, 3]])))
     class_predictions_with_background_batch_normalized = class_predictions_with_background_batch #(
         #self._second_stage_score_conversion_fn(
         #    class_predictions_with_background_batch))
