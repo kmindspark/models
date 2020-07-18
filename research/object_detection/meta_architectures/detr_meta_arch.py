@@ -669,12 +669,14 @@ class DETRMetaArch(model.DetectionModel):
         self.num_queries,
         refined_box_encodings.shape[1],
         self._box_coder.code_size])
+    print(refined_box_encodings_batch)
     class_predictions_with_background_batch = tf.reshape(
         class_predictions_with_background,
         [-1, self.num_queries, self.num_classes + 1]
     )
     refined_decoded_boxes_batch = self._batch_decode_boxes(
         refined_box_encodings_batch, proposal_boxes)
+    print(refined_box_encodings_batch)
     refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(refined_decoded_boxes_batch, image_shape=orig_image_shapes)
     class_predictions_with_background_batch_normalized = class_predictions_with_background_batch #(
         #self._second_stage_score_conversion_fn(
