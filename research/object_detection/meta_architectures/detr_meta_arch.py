@@ -381,8 +381,8 @@ class DETRMetaArch(model.DetectionModel):
           weights=batch_reg_weights,
           losses_mask=losses_mask) / normalizer
       my_loc_loss = self._localization_loss_iou(
-          self._box_coder.decode(tf.reshape(reshaped_refined_box_encodings, [-1, 4])),
-          self._box_coder.decode(tf.reshape(batch_reg_targets, [-1, 4])),
+          self._box_coder.decode(tf.reshape(reshaped_refined_box_encodings, [-1, 4]), None),
+          self._box_coder.decode(tf.reshape(batch_reg_targets, [-1, 4]), None),
           weights=batch_reg_weights,
           losses_mask=losses_mask) / normalizer
       #print(my_loc_loss.shape)
