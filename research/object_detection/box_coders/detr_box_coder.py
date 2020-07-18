@@ -92,9 +92,9 @@ class DETRBoxCoder(box_coder.BoxCoder):
       boxes: BoxList holding N bounding boxes.
     """
     ty, tx, th, tw = tf.unstack(tf.transpose(rel_codes))
-    
-    w = tf.exp(tw)
-    h = tf.exp(th) 
+
+    w = tf.tw
+    h = tf.th 
     ycenter = ty
     xcenter = tx
     ymin = ycenter - h / 2.
