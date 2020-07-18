@@ -117,7 +117,7 @@ class DETRMetaArch(model.DetectionModel):
     #    bboxes_encoded, image_shape, self._parallel_iterations)
     print("Encoded bboxes")
     print(bboxes_encoded)
-    #print(logits)
+    print(logits)
     #print(self.queries)
     reshaped_bboxes = tf.reshape(bboxes_encoded, [bboxes_encoded.shape[0] * bboxes_encoded.shape[1], 1, bboxes_encoded.shape[2]])
     batches_queries = tf.repeat(tf.expand_dims(self.num_queries, 0), x.shape[0], axis=0)
