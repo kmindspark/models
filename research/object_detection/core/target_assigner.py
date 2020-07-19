@@ -217,7 +217,7 @@ class TargetAssigner(object):
       match = self._matcher.match(match_quality_matrix,
                                   valid_rows=tf.greater(groundtruth_weights, 0))
 
-      print("Match", match)
+      print("Match", match._match_results)
       #print(match._match_results)
       reg_targets = self._create_regression_targets(anchors,
                                                     groundtruth_boxes,
