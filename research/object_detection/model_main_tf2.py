@@ -103,7 +103,8 @@ def main(unused_argv):
           pipeline_config_path=FLAGS.pipeline_config_path,
           model_dir=FLAGS.model_dir,
           train_steps=FLAGS.num_train_steps,
-          use_tpu=FLAGS.use_tpu)
+          use_tpu=FLAGS.use_tpu,
+          checkpoint_every_n=100)
 
 if __name__ == '__main__':
   tf.compat.v1.app.run()

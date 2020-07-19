@@ -437,8 +437,8 @@ def _create_tf_record_from_coco_annotations(annotations_file, image_dir,
     total_num_keypoint_annotations_skipped = 0
     total_num_densepose_annotations_skipped = 0
     for idx, image in enumerate(images):
-      if idx >= 1:
-        break
+      if idx != 10:
+        continue
       if idx % 100 == 0:
         logging.info('On image %d of %d', idx, len(images))
       annotations_list = annotations_index[image['id']]
