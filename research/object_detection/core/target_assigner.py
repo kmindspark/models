@@ -213,7 +213,7 @@ class TargetAssigner(object):
                                                            anchors,
                                                            groundtruth_labels=groundtruth_labels,
                                                            predicted_labels=class_predictions)
-      #print(match_quality_matrix)                                                     
+      print(match_quality_matrix)                                                     
       match = self._matcher.match(match_quality_matrix,
                                   valid_rows=tf.greater(groundtruth_weights, 0))
 
