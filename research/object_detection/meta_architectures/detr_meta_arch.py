@@ -80,7 +80,7 @@ class DETRMetaArch(model.DetectionModel):
     #self.bboxes = tf.keras.layers.Dense(4)
     self.cls = tf.keras.layers.Dense(num_classes + 1, activation="sigmoid")
     self.cls_activation = tf.keras.layers.Softmax()
-    self.queries = tf.Variable(initial_value=tf.zeros((self.num_queries, self.hidden_dimension)), trainable=True)#tf.keras.backend.variable(tf.random.uniform([self.num_queries, self.hidden_dimension]))
+    self.queries = tf.keras.backend.variable(tf.random.uniform([self.num_queries, self.hidden_dimension])) #tf.Variable(initial_value=tf.zeros((self.num_queries, self.hidden_dimension)), trainable=True)
     self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
     self._localization_loss_iou = losses.WeightedIOULocalizationLoss()
     self._classification_loss = losses.WeightedSoftmaxClassificationLoss()
