@@ -121,6 +121,7 @@ class DETRMetaArch(model.DetectionModel):
     #print(self.queries)
     reshaped_bboxes = tf.reshape(bboxes_encoded, [bboxes_encoded.shape[0] * bboxes_encoded.shape[1], 1, bboxes_encoded.shape[2]])
     batches_queries = tf.repeat(tf.expand_dims(self.num_queries, 0), x.shape[0], axis=0)
+    print("Queries", self.queries)
     return {
       "refined_box_encodings": reshaped_bboxes,
       "class_predictions_with_background": logits,
