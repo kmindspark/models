@@ -335,7 +335,7 @@ def matched_iou(boxlist1, boxlist2, scope=None):
 
 def matched_giou(boxlist1, boxlist2, scope=None):
   with tf.name_scope(scope, 'MatchedGIOU'):
-    
+    pass
 
 def ioa(boxlist1, boxlist2, scope=None):
   """Computes pairwise intersection-over-area between box collections.
