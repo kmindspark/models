@@ -93,6 +93,7 @@ class DETRMetaArch(model.DetectionModel):
     self._box_ffn = tf.keras.Sequential(layers=[tf.keras.layers.Dense(self.hidden_dimension, activation="relu"),
                                                 tf.keras.layers.Dense(4, activation="sigmoid")])
     self.is_training = is_training
+    self.second_stage_score_conversion_fn = second_stage_score_conversion_fn
   @property
   def first_stage_feature_extractor_scope(self):
     return 'FirstStageFeatureExtractor'
@@ -107,7 +108,7 @@ class DETRMetaArch(model.DetectionModel):
     x = self._post_filter(self.first_stage(preprocessed_inputs, training=self.is_training))
     x = tf.reshape(x, [x.shape[0], x.shape[1] * x.shape[2], x.shape[3]])
     x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)], training=self.is_training)
-    bboxes_encoded, logits = self._box_ffn(x), self.cls_activation(self.cls(x))
+    bboxes_encoded, logits = self._box_ffn(x), self.cls(x)
 
     #fake_logits = np.zeros((1, 10, 91))
     #fake_logits[:,:,5] = 1
@@ -410,6 +411,8 @@ class DETRMetaArch(model.DetectionModel):
       #print(my_loc_loss.shape)
       second_stage_loc_losses += 2 * my_loc_loss/normalizer
       #print(my_loc_loss * 5/normalizer)
+
+      print("CLASSLOSS: ", class_predictions_with_background, batch_cls_targets_with_background)
       second_stage_cls_losses = ops.reduce_sum_trailing_dimensions(
           self._classification_loss(
               class_predictions_with_background,
@@ -701,7 +704,8 @@ class DETRMetaArch(model.DetectionModel):
     print(refined_decoded_boxes_batch)
     refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(tf.squeeze(refined_decoded_boxes_batch, axis=[2]), image_shape=orig_image_shapes, temp=True)
     refined_decoded_boxes_batch = tf.expand_dims(refined_decoded_boxes_batch, axis=2)
-    class_predictions_with_background_batch_normalized = class_predictions_with_background_batch #(
+    class_predictions_with_background_batch_normalized = self._second_stage_score_conversion_fn(
+            class_predictions_with_background_batch)#class_predictions_with_background_batch #(
         #self._second_stage_score_conversion_fn(
         #    class_predictions_with_background_batch))
     class_predictions_batch = tf.reshape(
