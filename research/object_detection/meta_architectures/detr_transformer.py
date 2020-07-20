@@ -23,7 +23,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 from official.nlp.modeling.layers import position_embedding
-from official.nlp.transformer import attention_layer
+from object_detection.meta_architectures import detr_attention as attention_layer
 from official.nlp.transformer import beam_search
 from official.nlp.transformer import embedding_layer
 from official.nlp.transformer import ffn_layer
@@ -169,7 +169,7 @@ class Transformer(tf.keras.Model):
       with tf.name_scope("add_pos_encoding"):
         pos_encoding = self.position_embedding(inputs=inputs)
         pos_encoding = tf.cast(pos_encoding, self.params["dtype"])
-        encoder_inputs = inputs + pos_encoding
+        #encoder_inputs = inputs + pos_encoding
 
       if training:
         encoder_inputs = tf.nn.dropout(
@@ -202,10 +202,10 @@ class Transformer(tf.keras.Model):
         decoder_inputs = tf.pad(decoder_inputs,
                                 [[0, 0], [1, 0], [0, 0]])[:, :-1, :]
       length = tf.shape(decoder_inputs)[1]
-      #with tf.name_scope("add_pos_encoding"):
+      with tf.name_scope("add_pos_encoding"):
       #  
-      #  pos_encoding = self.position_embedding(decoder_inputs)
-      #  pos_encoding = tf.cast(pos_encoding, self.params["dtype"])
+        pos_encoding = self.position_embedding(decoder_inputs)
+        pos_encoding = tf.cast(pos_encoding, self.params["dtype"])
       #  decoder_inputs += pos_encoding
       if training:
         decoder_inputs = tf.nn.dropout(
@@ -220,7 +220,9 @@ class Transformer(tf.keras.Model):
           encoder_outputs,
           decoder_self_attention_bias,
           attention_bias,
-          training=training)
+          training=training,
+          encoding=pos_encoding,
+          queries=decoder_inputs)
       return outputs
 
   def _get_symbols_to_logits_fn(self, max_decode_length, training):
@@ -371,15 +373,15 @@ class PrePostProcessingWrapper(tf.keras.layers.Layer):
     # Preprocessing: apply layer normalization
     training = kwargs["training"]
 
-    y = self.layer_norm(x)
+    #y = self.layer_norm(x)
 
     # Get layer output
-    y = self.layer(y, *args, **kwargs)
+    y = self.layer(x, *args, **kwargs)
 
     # Postprocessing: apply dropout and residual connection
     if training:
       y = tf.nn.dropout(y, rate=self.postprocess_dropout)
-    return x + y
+    return self.layer_norm(x + y)
 
 
 class EncoderStack(tf.keras.layers.Layer):
@@ -422,7 +424,7 @@ class EncoderStack(tf.keras.layers.Layer):
         "params": self.params,
     }
 
-  def call(self, encoder_inputs, attention_bias, inputs_padding, training):
+  def call(self, encoder_inputs, attention_bias, inputs_padding, training, encoding=None):
     """Return the output of the encoder layer stacks.
 
     Args:
@@ -445,7 +447,7 @@ class EncoderStack(tf.keras.layers.Layer):
       with tf.name_scope("layer_%d" % n):
         with tf.name_scope("self_attention"):
           encoder_inputs = self_attention_layer(
-              encoder_inputs, attention_bias, training=training, use_bias=False)
+              encoder_inputs + encoding, encoder_inputs, attention_bias, training=training, use_bias=False)
         with tf.name_scope("ffn"):
           encoder_inputs = feed_forward_network(
               encoder_inputs, training=training)
@@ -503,7 +505,9 @@ class DecoderStack(tf.keras.layers.Layer):
            attention_bias,
            training,
            cache=None,
-           decode_loop_step=None):
+           decode_loop_step=None,
+           encodings=None,
+           queries=None):
     """Return the output of the decoder layer stacks.
 
     Args:
@@ -540,7 +544,7 @@ class DecoderStack(tf.keras.layers.Layer):
       with tf.name_scope(layer_name):
         with tf.name_scope("self_attention"):
           decoder_inputs = self_attention_layer(
-              decoder_inputs,
+              decoder_inputs,,
               decoder_self_attention_bias,
               training=training,
               cache=layer_cache,
