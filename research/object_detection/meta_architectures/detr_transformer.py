@@ -376,7 +376,7 @@ class PrePostProcessingWrapper(tf.keras.layers.Layer):
     #y = self.layer_norm(x)
 
     # Get layer output
-    y = self.layer(x, *args, **kwargs)
+    y = self.layer(*args, **kwargs)
 
     # Postprocessing: apply dropout and residual connection
     if training:
@@ -447,10 +447,15 @@ class EncoderStack(tf.keras.layers.Layer):
       with tf.name_scope("layer_%d" % n):
         with tf.name_scope("self_attention"):
           encoder_inputs = self_attention_layer(
-              encoder_inputs + encoding, encoder_inputs, attention_bias, training=training, use_bias=False)
+              encoder_inputs,
+              encoder_inputs + encoding,
+              encoder_inputs,
+              attention_bias,
+              training=training,
+              use_bias=False)
         with tf.name_scope("ffn"):
           encoder_inputs = feed_forward_network(
-              encoder_inputs, training=training)
+              encoder_inputs, encoder_inputs, training=training)
 
     return self.output_normalization(encoder_inputs)
 
@@ -544,7 +549,9 @@ class DecoderStack(tf.keras.layers.Layer):
       with tf.name_scope(layer_name):
         with tf.name_scope("self_attention"):
           decoder_inputs = self_attention_layer(
-              decoder_inputs,,
+              decoder_inputs,
+              decoder_inputs + queries,
+              decoder_inputs,
               decoder_self_attention_bias,
               training=training,
               cache=layer_cache,
@@ -553,12 +560,14 @@ class DecoderStack(tf.keras.layers.Layer):
         with tf.name_scope("encdec_attention"):
           decoder_inputs = enc_dec_attention_layer(
               decoder_inputs,
+              decoder_inputs + queries,
+              encoder_outputs + encodings,
               encoder_outputs,
               attention_bias,
               training=training,
               use_bias=False)
         with tf.name_scope("ffn"):
           decoder_inputs = feed_forward_network(
-              decoder_inputs, training=training)
+              decoder_inputs, decoder_inputs, training=training)
 
     return self.output_normalization(decoder_inputs)
