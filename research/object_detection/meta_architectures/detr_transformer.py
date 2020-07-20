@@ -141,13 +141,13 @@ class Transformer(tf.keras.Model):
 
       # Run the inputs through the encoder layer to map the symbol
       # representations to continuous representations.
-      encoder_outputs = self.encode(inputs, attention_bias, training)
+      encoder_outputs, spatial = self.encode(inputs, attention_bias, training)
       # Generate output sequence if targets is None, or return logits if target
       # sequence is known.
       if targets is None:
         return self.predict(encoder_outputs, attention_bias, training)
       else:
-        logits = self.decode(targets, encoder_outputs, attention_bias, training)
+        logits = self.decode(targets, encoder_outputs, attention_bias, training, encoding=spatial)
         return logits
 
   def encode(self, inputs, attention_bias, training):
@@ -178,9 +178,9 @@ class Transformer(tf.keras.Model):
             encoder_inputs, rate=self.params["layer_postprocess_dropout"])
 
       return self.encoder_stack(
-          encoder_inputs, attention_bias, inputs_padding, training=training, encoding=pos_encoding)
+          encoder_inputs, attention_bias, inputs_padding, training=training, encoding=pos_encoding), pos_encoding
 
-  def decode(self, targets, encoder_outputs, attention_bias, training):
+  def decode(self, targets, encoder_outputs, attention_bias, training, encoding=None):
     """Generate logits for each value in the target sequence.
 
     Args:
@@ -204,10 +204,10 @@ class Transformer(tf.keras.Model):
         decoder_inputs = tf.pad(decoder_inputs,
                                 [[0, 0], [1, 0], [0, 0]])[:, :-1, :]
       length = tf.shape(decoder_inputs)[1]
-      with tf.name_scope("add_pos_encoding"):
+      #with tf.name_scope("add_pos_encoding"):
       #  
-        pos_encoding = self.position_embedding(decoder_inputs)
-        pos_encoding = tf.cast(pos_encoding, self.params["dtype"])
+        #pos_encoding = self.position_embedding(decoder_inputs)
+        #pos_encoding = tf.cast(pos_encoding, self.params["dtype"])
       #  decoder_inputs += pos_encoding
       if training:
         decoder_inputs = tf.nn.dropout(
@@ -223,7 +223,7 @@ class Transformer(tf.keras.Model):
           decoder_self_attention_bias,
           attention_bias,
           training=training,
-          encoding=pos_encoding,
+          encoding=encoding,
           queries=decoder_inputs)
       return outputs
 
