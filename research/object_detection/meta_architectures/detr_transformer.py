@@ -513,7 +513,7 @@ class DecoderStack(tf.keras.layers.Layer):
            training,
            cache=None,
            decode_loop_step=None,
-           encodings=None,
+           encoding=None,
            queries=None):
     """Return the output of the decoder layer stacks.
 
@@ -563,7 +563,7 @@ class DecoderStack(tf.keras.layers.Layer):
           decoder_inputs = enc_dec_attention_layer(
               decoder_inputs,
               decoder_inputs + queries,
-              encoder_outputs + encodings,
+              encoder_outputs + encoding,
               encoder_outputs,
               attention_bias,
               training=training,
