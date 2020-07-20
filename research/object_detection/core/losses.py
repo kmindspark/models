@@ -37,6 +37,7 @@ from object_detection.core import box_list
 from object_detection.core import box_list_ops
 from object_detection.utils import ops
 from object_detection.box_coders import detr_box_coder
+import tensorflow_addons as tfa
 
 class Loss(six.with_metaclass(abc.ABCMeta, object)):
   """Abstract base class for loss functions."""
@@ -208,6 +209,36 @@ class WeightedIOULocalizationLoss(Loss):
                                                          target_boxes)
     print("Weights", weights)
     return tf.reshape(weights, [-1]) * per_anchor_iou_loss
+
+class WeightedGIOULocalizationLoss(Loss):
+  """IOU localization loss function.
+
+  Sums the IOU for corresponding pairs of predicted/groundtruth boxes
+  and for each pair assign a loss of 1 - IOU.  We then compute a weighted
+  sum over all pairs which is returned as the total loss.
+  """
+
+  def _compute_loss(self, prediction_tensor, target_tensor, weights):
+    """Compute loss function.
+
+    Args:
+      prediction_tensor: A float tensor of shape [batch_size, num_anchors, 4]
+        representing the decoded predicted boxes
+      target_tensor: A float tensor of shape [batch_size, num_anchors, 4]
+        representing the decoded target boxes
+      weights: a float tensor of shape [batch_size, num_anchors]
+
+    Returns:
+      loss: a float tensor of shape [batch_size, num_anchors] tensor
+        representing the value of the loss function.
+    """
+    predicted_boxes = prediction_tensor# box_list.BoxList(tf.reshape(prediction_tensor, [-1, 4]))
+    target_boxes = target_tensor #box_list.BoxList(tf.reshape(target_tensor, [-1, 4]))
+    loss_function = tfa.losses.GIouLoss()
+    per_anchor_iou_loss = #1.0 - box_list_ops.matched_iou(predicted_boxes,
+                          #                               target_boxes)
+    #print("Weights", weights)
+    return tf.reshape(weights, [-1]) * loss_function# * per_anchor_iou_loss
 
 
 class WeightedSigmoidClassificationLoss(Loss):
