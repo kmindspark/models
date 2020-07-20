@@ -386,9 +386,9 @@ class DETRMetaArch(model.DetectionModel):
       def convert_to_minmaxcoords(input_tensor):
         reshaped_encodings = tf.reshape(input_tensor, [-1, 4])
         ycenter = tf.gather(reshaped_encodings, [0])
-        xcenter = tf.gather(reshaped_encodings, [0])
-        h = tf.gather(reshaped_encodings, [0])
-        w = tf.gather(reshaped_encodings, [0])
+        xcenter = tf.gather(reshaped_encodings, [1])
+        h = tf.gather(reshaped_encodings, [:, 2])
+        w = tf.gather(reshaped_encodings, [:, 3])
         ymin = ycenter - h / 2.
         xmin = xcenter - w / 2.
         ymax = ycenter + h / 2.
