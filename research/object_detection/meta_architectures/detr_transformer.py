@@ -116,6 +116,7 @@ class Transformer(tf.keras.Model):
     Raises:
       NotImplementedError: If try to use padded decode method on CPU/GPUs.
     """
+    print("TRAINING: ", training)
     if len(inputs) == 2:
       inputs, targets = inputs[0], inputs[1]
     else:
@@ -170,6 +171,7 @@ class Transformer(tf.keras.Model):
         pos_encoding = self.position_embedding(inputs=inputs)
         pos_encoding = tf.cast(pos_encoding, self.params["dtype"])
         #encoder_inputs = inputs + pos_encoding
+        encoder_inputs = inputs
 
       if training:
         encoder_inputs = tf.nn.dropout(
