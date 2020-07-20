@@ -394,7 +394,7 @@ class DETRMetaArch(model.DetectionModel):
         ymax = ycenter + h / 2.
         xmax = xcenter + w / 2.
         print("RESULT", tf.stack([ymin, xmin, ymax, xmax], axis=1))
-        return tf.stack([ymin, xmin, ymax, xmax], axis=1)
+        return tf.squeeze(tf.stack([ymin, xmin, ymax, xmax], axis=1))
 
       my_loc_loss = self._localization_loss_iou(
           convert_to_minmaxcoords(tf.reshape(reshaped_refined_box_encodings, [-1, 4])),
