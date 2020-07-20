@@ -688,27 +688,16 @@ class DETRMetaArch(model.DetectionModel):
         refined_box_encodings,
         [-1,
         self.num_queries,
-        refined_box_encodings.shape[1],
         self._box_coder.code_size])
-    print(refined_box_encodings_batch)
     class_predictions_with_background_batch = tf.reshape(
         class_predictions_with_background,
         [-1, self.num_queries, self.num_classes + 1]
     )
     refined_decoded_boxes_batch = self._batch_decode_boxes(
         refined_box_encodings_batch, proposal_boxes)
-    print(refined_decoded_boxes_batch)
-    refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(tf.squeeze(refined_decoded_boxes_batch, axis=[2]), image_shape=orig_image_shapes, temp=True)
-    refined_decoded_boxes_batch = tf.expand_dims(refined_decoded_boxes_batch, axis=2)
-    class_predictions_with_background_batch_normalized = class_predictions_with_background_batch #(
-        #self._second_stage_score_conversion_fn(
-        #    class_predictions_with_background_batch))
-    class_predictions_batch = tf.reshape(
-        tf.slice(class_predictions_with_background_batch_normalized,
-                [0, 0, 1], [-1, -1, -1]),
-        [-1, self.num_queries, self.num_classes])
-    clip_window = self._compute_clip_window(image_shapes)
-    mask_predictions_batch = None
+    refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(refined_decoded_boxes_batch), image_shape=orig_image_shapes, temp=True)
+    class_predictions_with_background_batch_normalized = class_predictions_with_background_batch 
+    class_predictions_batch = tf.reshape(class_predictions_with_background_batch_normalized, [-1, self.num_queries, self.num_classes])
 
     batch_size = shape_utils.combined_static_and_dynamic_shape(
         refined_box_encodings_batch)[0]
@@ -716,39 +705,17 @@ class DETRMetaArch(model.DetectionModel):
         tf.expand_dims(tf.range(self.num_queries), 0),
         multiples=[batch_size, 1])
     additional_fields = {
-        'multiclass_scores': class_predictions_with_background_batch_normalized,
-        'anchor_indices': tf.cast(batch_anchor_indices, tf.float32)
+        'multiclass_scores': class_predictions_with_background_batch_normalized
     }
-    print("BEFORE NMS", refined_decoded_boxes_batch)]
 
     nmsed_boxes = refined_decoded_boxes_batch
-    nmsed_classes = tf.argmax()
-    nmsed_scores = 
+    nmsed_classes = tf.argmax(class_predictions_batch, axis=2)
+    nmsed_scores = tf.math.reduce_max(class_predictions_batch, axis=2)
 
-    (nmsed_boxes, nmsed_scores, nmsed_classes, nmsed_masks,
-    nmsed_additional_fields, num_detections) = self._second_stage_nms_fn(
-        refined_decoded_boxes_batch,
-        class_predictions_batch,
-        clip_window=clip_window,
-        change_coordinate_frame=True,
-        num_valid_boxes=num_proposals,
-        additional_fields=additional_fields,
-        masks=mask_predictions_batch)
-    print("AFTER NMS", nmsed_boxes)
-    if refined_decoded_boxes_batch.shape[2] > 1:
-      class_ids = tf.expand_dims(
-          tf.argmax(class_predictions_with_background_batch[:, :, 1:], axis=2,
-                    output_type=tf.int32),
-          axis=-1)
-      raw_detection_boxes = tf.squeeze(
-          tf.batch_gather(refined_decoded_boxes_batch, class_ids), axis=2)
-    else:
-      raw_detection_boxes = tf.squeeze(refined_decoded_boxes_batch, axis=2)
-
-    raw_normalized_detection_boxes = shape_utils.static_or_dynamic_map_fn(
-        self._normalize_and_clip_boxes,
-        elems=[raw_detection_boxes, image_shapes],
-        dtype=tf.float32)
+    non_background_mask = tf.cast(tf.greater_equal(nmsed_classes, 1), tf.float32)
+    nmsed_boxes = tf.multiply(tf.repeat(tf.expand_dims(non_background_mask, axis=2), axis=2, repeats=4), nmsed_boxes)
+    nmsed_classes = tf.boolean_mask(nmsed_classes)
+    nmsed_scores = tf.boolean_mask(nmsed_scores)
 
     detections = {
         fields.DetectionResultFields.detection_boxes:
@@ -760,11 +727,11 @@ class DETRMetaArch(model.DetectionModel):
         fields.DetectionResultFields.detection_multiclass_scores:
             nmsed_additional_fields['multiclass_scores'],
         fields.DetectionResultFields.detection_anchor_indices:
-            tf.cast(nmsed_additional_fields['anchor_indices'], tf.int32),
+            None,
         fields.DetectionResultFields.num_detections:
             tf.cast(num_detections, dtype=tf.float32),
         fields.DetectionResultFields.raw_detection_boxes:
-            raw_normalized_detection_boxes,
+            refined_box_encodings_batch,
         fields.DetectionResultFields.raw_detection_scores:
             class_predictions_with_background_batch_normalized
     }
