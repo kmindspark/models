@@ -176,7 +176,7 @@ class Transformer(tf.keras.Model):
             encoder_inputs, rate=self.params["layer_postprocess_dropout"])
 
       return self.encoder_stack(
-          encoder_inputs, attention_bias, inputs_padding, training=training)
+          encoder_inputs, attention_bias, inputs_padding, training=training, encoding=pos_encoding)
 
   def decode(self, targets, encoder_outputs, attention_bias, training):
     """Generate logits for each value in the target sequence.
