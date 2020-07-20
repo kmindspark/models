@@ -109,9 +109,9 @@ class DETRMetaArch(model.DetectionModel):
     x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)], training=self.is_training)
     bboxes_encoded, logits = self._box_ffn(x), self.cls_activation(self.cls(x))
 
-    fake_logits = np.zeros((1, 10, 91))
-    fake_logits[:,:,5] = 1
-    logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
+    #fake_logits = np.zeros((1, 10, 91))
+    #fake_logits[:,:,5] = 1
+    #logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
 
     #print(logits)
     #bboxes_encoded = self._bbox_ffn(bboxes_encoded) #tf.keras.backend.sigmoid(bboxes_encoded)
@@ -379,7 +379,7 @@ class DETRMetaArch(model.DetectionModel):
       print("LOSS: encodings and targets")
       print(reshaped_refined_box_encodings)
       print(batch_reg_targets)
-      second_stage_loc_losses = 2 * self._localization_loss(
+      second_stage_loc_losses = 5 * self._localization_loss(
           reshaped_refined_box_encodings,
           batch_reg_targets,
           weights=batch_reg_weights,
@@ -408,7 +408,7 @@ class DETRMetaArch(model.DetectionModel):
       my_loc_loss = tf.reshape(my_loc_loss, shape=[reshaped_refined_box_encodings.shape[0], reshaped_refined_box_encodings.shape[1]])
       #print(second_stage_loc_losses.shape)
       #print(my_loc_loss.shape)
-      second_stage_loc_losses += 5 * my_loc_loss/normalizer
+      second_stage_loc_losses += 2 * my_loc_loss/normalizer
       #print(my_loc_loss * 5/normalizer)
       second_stage_cls_losses = ops.reduce_sum_trailing_dimensions(
           self._classification_loss(
