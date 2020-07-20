@@ -108,9 +108,9 @@ class DETRMetaArch(model.DetectionModel):
     x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)])
     bboxes_encoded, logits = self._box_ffn(x), self.cls_activation(self.cls(x))
 
-    fake_logits = np.zeros((1, 10, 91))
-    fake_logits[:,:,5] = 1
-    logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
+    #fake_logits = np.zeros((1, 10, 91))
+    #fake_logits[:,:,5] = 1
+    #logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
     #print(logits)
     #bboxes_encoded = self._bbox_ffn(bboxes_encoded) #tf.keras.backend.sigmoid(bboxes_encoded)
     #bboxes_encoded = ops.normalized_to_image_coordinates(
@@ -719,7 +719,12 @@ class DETRMetaArch(model.DetectionModel):
         'multiclass_scores': class_predictions_with_background_batch_normalized,
         'anchor_indices': tf.cast(batch_anchor_indices, tf.float32)
     }
-    print("BEFORE NMS", refined_decoded_boxes_batch)
+    print("BEFORE NMS", refined_decoded_boxes_batch)]
+
+    nmsed_boxes = refined_decoded_boxes_batch
+    nmsed_classes = tf.argmax()
+    nmsed_scores = 
+
     (nmsed_boxes, nmsed_scores, nmsed_classes, nmsed_masks,
     nmsed_additional_fields, num_detections) = self._second_stage_nms_fn(
         refined_decoded_boxes_batch,
