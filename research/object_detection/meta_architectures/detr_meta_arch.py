@@ -729,6 +729,8 @@ class DETRMetaArch(model.DetectionModel):
         num_valid_boxes=num_proposals,
         additional_fields=additional_fields,
         masks=mask_predictions_batch)
+    print("BEFORE", refined_decoded_boxes_batch)
+    print("AFTER", nmsed_boxes)
     if refined_decoded_boxes_batch.shape[2] > 1:
       class_ids = tf.expand_dims(
           tf.argmax(class_predictions_with_background_batch[:, :, 1:], axis=2,
