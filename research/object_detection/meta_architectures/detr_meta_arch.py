@@ -714,8 +714,8 @@ class DETRMetaArch(model.DetectionModel):
 
     non_background_mask = tf.cast(tf.greater_equal(nmsed_classes, 1), tf.float32)
     nmsed_boxes = tf.multiply(tf.repeat(tf.expand_dims(non_background_mask, axis=2), axis=2, repeats=4), nmsed_boxes)
-    nmsed_classes = tf.boolean_mask(nmsed_classes)
-    nmsed_scores = tf.boolean_mask(nmsed_scores)
+    nmsed_classes = tf.multiply(nmsed_classes, non_background_mask)
+    nmsed_scores = tf.boolean_mask(nmsed_scores, non_background_mask)
 
     detections = {
         fields.DetectionResultFields.detection_boxes:
@@ -725,11 +725,11 @@ class DETRMetaArch(model.DetectionModel):
         fields.DetectionResultFields.detection_classes:
             nmsed_classes,
         fields.DetectionResultFields.detection_multiclass_scores:
-            nmsed_additional_fields['multiclass_scores'],
+            additional_fields['multiclass_scores'],
         fields.DetectionResultFields.detection_anchor_indices:
             None,
         fields.DetectionResultFields.num_detections:
-            tf.cast(num_detections, dtype=tf.float32),
+            tf.cast(tf.count_nonzero(nmsed_scores), dtype=tf.float32),
         fields.DetectionResultFields.raw_detection_boxes:
             refined_box_encodings_batch,
         fields.DetectionResultFields.raw_detection_scores:
