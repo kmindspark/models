@@ -93,7 +93,7 @@ class DETRMetaArch(model.DetectionModel):
     self._box_ffn = tf.keras.Sequential(layers=[tf.keras.layers.Dense(self.hidden_dimension, activation="relu"),
                                                 tf.keras.layers.Dense(4, activation="sigmoid")])
     self.is_training = is_training
-    self.second_stage_score_conversion_fn = second_stage_score_conversion_fn
+    self._second_stage_score_conversion_fn = second_stage_score_conversion_fn
   @property
   def first_stage_feature_extractor_scope(self):
     return 'FirstStageFeatureExtractor'
