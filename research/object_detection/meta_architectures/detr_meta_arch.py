@@ -105,7 +105,7 @@ class DETRMetaArch(model.DetectionModel):
     image_shape = tf.shape(preprocessed_inputs)
     x = self._post_filter(self.first_stage(preprocessed_inputs))
     x = tf.reshape(x, [x.shape[0], x.shape[1] * x.shape[2], x.shape[3]])
-    x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)])
+    x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)], training=True)
     bboxes_encoded, logits = self._box_ffn(x), self.cls_activation(self.cls(x))
 
     fake_logits = np.zeros((1, 10, 91))
