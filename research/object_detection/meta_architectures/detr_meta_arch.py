@@ -698,7 +698,7 @@ class DETRMetaArch(model.DetectionModel):
     print("REFINED DEDCODED", refined_box_encodings_batch)
     refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(refined_decoded_boxes_batch, image_shape=orig_image_shapes, temp=True)
     class_predictions_with_background_batch_normalized = class_predictions_with_background_batch 
-    class_predictions_batch = tf.reshape(class_predictions_with_background_batch_normalized, [-1, self.num_queries, self.num_classes])
+    class_predictions_batch = tf.reshape(class_predictions_with_background_batch_normalized, [-1, self.num_queries, self.num_classes + 1])
 
     batch_size = shape_utils.combined_static_and_dynamic_shape(
         refined_box_encodings_batch)[0]
@@ -706,7 +706,8 @@ class DETRMetaArch(model.DetectionModel):
         tf.expand_dims(tf.range(self.num_queries), 0),
         multiples=[batch_size, 1])
     additional_fields = {
-        'multiclass_scores': class_predictions_with_background_batch_normalized
+        'multiclass_scores': tf.slice(class_predictions_with_background_batch_normalized,
+                 [0, 0, 1], [-1, -1, -1])
     }
 
     nmsed_boxes = refined_decoded_boxes_batch
