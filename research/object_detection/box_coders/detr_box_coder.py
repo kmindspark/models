@@ -102,3 +102,4 @@ class DETRBoxCoder(box_coder.BoxCoder):
     ymax = ycenter + h / 2.
     xmax = xcenter + w / 2.
     return box_list.BoxList(tf.transpose(tf.stack([ymin, xmin, ymax, xmax])))
+

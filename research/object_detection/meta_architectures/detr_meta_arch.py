@@ -382,9 +382,22 @@ class DETRMetaArch(model.DetectionModel):
           batch_reg_targets,
           weights=batch_reg_weights,
           losses_mask=losses_mask) / normalizer
+
+      def convert_to_minmaxcoords(input_tensor):
+        reshaped_encodings = tf.reshape(input_tensor, [-1, 4])
+        ycenter = tf.gather(reshaped_encodings, [0])
+        xcenter = tf.gather(reshaped_encodings, [0])
+        h = tf.gather(reshaped_encodings, [0])
+        w = tf.gather(reshaped_encodings, [0])
+        ymin = ycenter - h / 2.
+        xmin = xcenter - w / 2.
+        ymax = ycenter + h / 2.
+        xmax = xcenter + w / 2.
+        return tf.stack([ymin, xmin, ymax, xmax], axis=1)
+
       my_loc_loss = self._localization_loss_iou(
-          self._box_coder.decode(tf.reshape(reshaped_refined_box_encodings, [-1, 4]), None),
-          self._box_coder.decode(tf.reshape(batch_reg_targets, [-1, 4]), None),
+          convert_to_minmaxcoords(tf.reshape(reshaped_refined_box_encodings, [-1, 4])),
+          convert_to_minmaxcoords(tf.reshape(batch_reg_targets, [-1, 4])),
           weights=batch_reg_weights,
           losses_mask=losses_mask)
       #print("LOSS results")
