@@ -330,6 +330,7 @@ def matched_iou(boxlist1, boxlist2, scope=None):
     intersections = matched_intersection(boxlist1, boxlist2)
     areas1 = area(boxlist1)
     areas2 = area(boxlist2)
+    print("AREAS AND INTERSECTION", areas1, areas2, intersections)
     unions = areas1 + areas2 - intersections
     return tf.where(
         tf.equal(intersections, 0.0),
