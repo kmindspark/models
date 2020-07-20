@@ -324,9 +324,6 @@ def matched_iou(boxlist1, boxlist2, scope=None):
     a tensor with shape [N] representing pairwise iou scores.
   """
   with tf.name_scope(scope, 'MatchedIOU'):
-    print("Matched IOU")
-    print(boxlist1.data["boxes"])
-    print(boxlist2.data["boxes"])
     intersections = matched_intersection(boxlist1, boxlist2)
     areas1 = area(boxlist1)
     areas2 = area(boxlist2)
@@ -336,6 +333,9 @@ def matched_iou(boxlist1, boxlist2, scope=None):
         tf.equal(intersections, 0.0),
         tf.zeros_like(intersections), tf.truediv(intersections, unions))
 
+def matched_giou(boxlist1, boxlist2, scope=None):
+  with tf.name_scope(scope, 'MatchedGIOU'):
+    
 
 def ioa(boxlist1, boxlist2, scope=None):
   """Computes pairwise intersection-over-area between box collections.
