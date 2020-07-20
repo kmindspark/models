@@ -393,6 +393,7 @@ class DETRMetaArch(model.DetectionModel):
         xmin = xcenter - w / 2.
         ymax = ycenter + h / 2.
         xmax = xcenter + w / 2.
+        print("RESULT", tf.stack([ymin, xmin, ymax, xmax], axis=1))
         return tf.stack([ymin, xmin, ymax, xmax], axis=1)
 
       my_loc_loss = self._localization_loss_iou(
