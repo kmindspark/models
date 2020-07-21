@@ -1004,7 +1004,7 @@ class DETRMetaArch(model.DetectionModel):
 
     return normalized_boxes_per_image
 
-  def change_coordinate_frame(self, boxlist, window, scope=None):
+  def change_coordinate_frame(self, boxlist_window, scope=None):
     """Change coordinate frame of the boxlist to be relative to window's frame.
 
     Given a window of the form [ymin, xmin, ymax, xmax],
@@ -1024,7 +1024,8 @@ class DETRMetaArch(model.DetectionModel):
     Returns:
       Returns a BoxList object with N boxes.
     """
-    boxlist = box_list.BoxList(boxlist)
+    boxlist = box_list.BoxList(boxlist_window[0])
+    window = boxlist_window[1]
     with tf.name_scope(scope, 'ChangeCoordinateFrame'):
       win_height = window[2] - window[0]
       win_width = window[3] - window[1]
