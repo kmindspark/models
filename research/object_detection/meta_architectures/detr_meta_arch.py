@@ -748,7 +748,7 @@ class DETRMetaArch(model.DetectionModel):
       raw_detection_boxes = tf.squeeze(refined_decoded_boxes_batch, axis=2)
 
     raw_normalized_detection_boxes = shape_utils.static_or_dynamic_map_fn(
-        self._normalize_and_clip_boxes,
+        self._clip_window_prune_boxes,
         elems=[raw_detection_boxes, image_shapes],
         dtype=tf.float32)
 
@@ -1033,3 +1033,45 @@ class DETRMetaArch(model.DetectionModel):
                           1.0 / win_height, 1.0 / win_width)
       boxlist_new = box_list_ops._copy_extra_fields(boxlist_new, boxlist)
       return boxlist_new.get()
+
+  def _clip_window_prune_boxes(self, sorted_boxesandclip_window, pad_to_max_output_size=False,
+                             change_coordinate_frame=True):
+    """Prune boxes with zero area.
+
+    Args:
+      sorted_boxes: A BoxList containing k detections.
+      clip_window: A float32 tensor of the form [y_min, x_min, y_max, x_max]
+        representing the window to clip and normalize boxes to before performing
+        non-max suppression.
+      pad_to_max_output_size: flag indicating whether to pad to max output size or
+        not.
+      change_coordinate_frame: Whether to normalize coordinates after clipping
+        relative to clip_window (this can only be set to True if a clip_window is
+        provided).
+
+    Returns:
+      sorted_boxes: A BoxList containing k detections after pruning.
+      num_valid_nms_boxes_cumulative: Number of valid NMS boxes
+    """
+    sorted_boxes = box_list.BoxList(sorted_boxesandclip_window[0])
+    clip_window = sorted_boxesandclip_window[1]
+    sorted_boxes = box_list_ops.clip_to_window(
+        sorted_boxes,
+        clip_window,
+        filter_nonoverlapping=not pad_to_max_output_size)
+    # Set the scores of boxes with zero area to -1 to keep the default
+    # behaviour of pruning out zero area boxes.
+    sorted_boxes_size = tf.shape(sorted_boxes.get())[0]
+    non_zero_box_area = tf.cast(box_list_ops.area(sorted_boxes), tf.bool)
+    sorted_boxes_scores = tf.where(
+        non_zero_box_area, sorted_boxes.get_field(fields.BoxListFields.scores),
+        -1 * tf.ones(sorted_boxes_size))
+    sorted_boxes.add_field(fields.BoxListFields.scores, sorted_boxes_scores)
+    num_valid_nms_boxes_cumulative = tf.reduce_sum(
+        tf.cast(tf.greater_equal(sorted_boxes_scores, 0), tf.int32))
+    sorted_boxes = box_list_ops.sort_by_field(sorted_boxes,
+                                              fields.BoxListFields.scores)
+    if change_coordinate_frame:
+      sorted_boxes = box_list_ops.change_coordinate_frame(sorted_boxes,
+                                                          clip_window)
+    return sorted_boxes, num_valid_nms_boxes_cumulative
