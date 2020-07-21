@@ -66,19 +66,19 @@ class DETRMetaArch(model.DetectionModel):
     print("Initializing model...")
     super(DETRMetaArch, self).__init__(num_classes=num_classes)
     self._image_resizer_fn = image_resizer_fn
-    self.num_queries = 10
+    self.num_queries = 100
     self.hidden_dimension = 128
     self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=False)
     self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()
     #for layer in self.first_stage.layers:
     #  layer.trainable = False
     self.target_assigner = target_assigner.create_target_assigner('DETR', 'detection')
-    self.transformer_args = {"hidden_size": self.hidden_dimension, "attention_dropout": 0, "num_heads": 8, "layer_postprocess_dropout": 0, "dtype": tf.float32, 
-      "num_hidden_layers": 4, "filter_size": 128, "relu_dropout": 0}
+    self.transformer_args = {"hidden_size": self.hidden_dimension, "attention_dropout": 0.05, "num_heads": 8, "layer_postprocess_dropout": 0, "dtype": tf.float32, 
+      "num_hidden_layers": 4, "filter_size": 128, "relu_dropout": 0.05}
     self.transformer = detr_transformer.Transformer(self.transformer_args)
     #self.ffn = self.feature_extractor.get_box_classifier_feature_extractor_model()
     #self.bboxes = tf.keras.layers.Dense(4)
-    self.cls = tf.keras.layers.Dense(num_classes + 1, activation="sigmoid")
+    self.cls = tf.keras.layers.Dense(num_classes + 1)
     self.cls_activation = tf.keras.layers.Softmax()
     self.queries = tf.keras.backend.variable(tf.random.uniform([self.num_queries, self.hidden_dimension])) #tf.Variable(initial_value=tf.zeros((self.num_queries, self.hidden_dimension)), trainable=True)
     self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
