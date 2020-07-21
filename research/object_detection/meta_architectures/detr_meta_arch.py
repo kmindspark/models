@@ -506,7 +506,7 @@ class DETRMetaArch(model.DetectionModel):
         rpn_features_to_crop is not in the prediction_dict.
     """
     with tf.name_scope('SecondStagePostprocessor'):
-      detections_dict = self._postprocess_box_classifier(
+      detections_dict = self._postprocess_box_classifier_new(
           prediction_dict['refined_box_encodings'],
           prediction_dict['class_predictions_with_background'],
           prediction_dict['proposal_boxes'],
@@ -841,7 +841,7 @@ class DETRMetaArch(model.DetectionModel):
     refined_decoded_boxes_batch = tf.squeeze(self._batch_decode_boxes(
         tf.expand_dims(refined_box_encodings_batch, axis=2), proposal_boxes), axis=2)
     print("REFINED DECODED", refined_box_encodings_batch)
-    #refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(refined_decoded_boxes_batch, image_shape=orig_image_shapes, temp=True)
+    refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(refined_decoded_boxes_batch, image_shape=orig_image_shapes, temp=True)
     class_predictions_with_background_batch_normalized = self._second_stage_score_conversion_fn(class_predictions_with_background_batch) 
     class_predictions_batch = tf.reshape(class_predictions_with_background_batch_normalized, [-1, self.num_queries, self.num_classes + 1])
 
@@ -868,6 +868,9 @@ class DETRMetaArch(model.DetectionModel):
     print(nmsed_boxes)
     print(nmsed_classes)
     print(nmsed_scores)
+
+    nmsed_boxes = shape_utils.static_or_dynamic_map_fn(self.change_coordinate_frame, [nmsed_boxes, clip_window])
+    nmsed_boxes = nmsed_boxes.get()
 
     detections = {
         fields.DetectionResultFields.detection_boxes:
@@ -1000,3 +1003,33 @@ class DETRMetaArch(model.DetectionModel):
           normalized_boxes_per_image, [max_num_proposals, num_classes])
 
     return normalized_boxes_per_image
+
+  def change_coordinate_frame(self, boxlist, window, scope=None):
+    """Change coordinate frame of the boxlist to be relative to window's frame.
+
+    Given a window of the form [ymin, xmin, ymax, xmax],
+    changes bounding box coordinates from boxlist to be relative to this window
+    (e.g., the min corner maps to (0,0) and the max corner maps to (1,1)).
+
+    An example use case is data augmentation: where we are given groundtruth
+    boxes (boxlist) and would like to randomly crop the image to some
+    window (window). In this case we need to change the coordinate frame of
+    each groundtruth box to be relative to this new window.
+
+    Args:
+      boxlist: A BoxList object holding N boxes.
+      window: A rank 1 tensor [4].
+      scope: name scope.
+
+    Returns:
+      Returns a BoxList object with N boxes.
+    """
+    boxlist = box_list.BoxList(boxlist)
+    with tf.name_scope(scope, 'ChangeCoordinateFrame'):
+      win_height = window[2] - window[0]
+      win_width = window[3] - window[1]
+      boxlist_new = scale(box_list.BoxList(
+          boxlist.get() - [window[0], window[1], window[0], window[1]]),
+                          1.0 / win_height, 1.0 / win_width)
+      boxlist_new = _copy_extra_fields(boxlist_new, boxlist)
+      return boxlist_new
