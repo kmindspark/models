@@ -858,7 +858,7 @@ class DETRMetaArch(model.DetectionModel):
 
     non_background_mask = tf.cast(tf.greater_equal(nmsed_classes, 1), tf.float32)
     nmsed_boxes = tf.multiply(tf.repeat(tf.expand_dims(non_background_mask, axis=2), axis=2, repeats=4), nmsed_boxes)
-    nmsed_classes = tf.multiply(tf.cast(nmsed_classes, tf.float32), non_background_mask) - tf.ones_like(nmsed_classes, type=tf.int64)
+    nmsed_classes = tf.multiply(tf.cast(nmsed_classes, tf.float32), non_background_mask) - tf.cast(tf.ones_like(nmsed_classes), dtype=tf.int64)
     nmsed_scores = tf.multiply(nmsed_scores, non_background_mask)
 
     print("NMSED")
