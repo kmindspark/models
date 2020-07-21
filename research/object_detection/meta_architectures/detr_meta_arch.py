@@ -411,6 +411,9 @@ class DETRMetaArch(model.DetectionModel):
       #print(my_loc_loss * 5/normalizer)
 
       #print("CLASSLOSS: ", class_predictions_with_background, batch_cls_targets_with_background)
+
+      batch_cls_weights = tf.concat([batch_cls_weights[:, :, 0], batch_cls_weights[:, :, 1:] / 10], axis=2)
+
       second_stage_cls_losses = ops.reduce_sum_trailing_dimensions(
           self._classification_loss(
               class_predictions_with_background,
