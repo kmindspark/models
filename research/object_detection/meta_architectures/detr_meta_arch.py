@@ -1061,16 +1061,16 @@ class DETRMetaArch(model.DetectionModel):
         filter_nonoverlapping=not pad_to_max_output_size)
     # Set the scores of boxes with zero area to -1 to keep the default
     # behaviour of pruning out zero area boxes.
-    sorted_boxes_size = tf.shape(sorted_boxes.get())[0]
-    non_zero_box_area = tf.cast(box_list_ops.area(sorted_boxes), tf.bool)
-    sorted_boxes_scores = tf.where(
-        non_zero_box_area, sorted_boxes.get_field(fields.BoxListFields.scores),
-        -1 * tf.ones(sorted_boxes_size))
-    sorted_boxes.add_field(fields.BoxListFields.scores, sorted_boxes_scores)
-    num_valid_nms_boxes_cumulative = tf.reduce_sum(
-        tf.cast(tf.greater_equal(sorted_boxes_scores, 0), tf.int32))
-    sorted_boxes = box_list_ops.sort_by_field(sorted_boxes,
-                                              fields.BoxListFields.scores)
+    #sorted_boxes_size = tf.shape(sorted_boxes.get())[0]
+    #non_zero_box_area = tf.cast(box_list_ops.area(sorted_boxes), tf.bool)
+    #sorted_boxes_scores = tf.where(
+    #    non_zero_box_area, sorted_boxes.get_field(fields.BoxListFields.scores),
+    #    -1 * tf.ones(sorted_boxes_size))
+    #sorted_boxes.add_field(fields.BoxListFields.scores, sorted_boxes_scores)
+    #num_valid_nms_boxes_cumulative = tf.reduce_sum(
+    #    tf.cast(tf.greater_equal(sorted_boxes_scores, 0), tf.int32))
+    #sorted_boxes = box_list_ops.sort_by_field(sorted_boxes,
+    #                                          fields.BoxListFields.scores)
     if change_coordinate_frame:
       sorted_boxes = box_list_ops.change_coordinate_frame(sorted_boxes,
                                                           clip_window)
