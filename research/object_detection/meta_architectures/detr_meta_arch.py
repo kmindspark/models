@@ -116,9 +116,9 @@ class DETRMetaArch(model.DetectionModel):
     #fake_logits[:,:,5] = 1
     #logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
 
-    #print("Encoded bboxes")
+    print("Predicted logits")
     #print(bboxes_encoded)
-    #print(logits)
+    print(logits)
     #print(self.queries)
 
     reshaped_bboxes = tf.reshape(bboxes_encoded, [bboxes_encoded.shape[0] * bboxes_encoded.shape[1], 1, bboxes_encoded.shape[2]])
