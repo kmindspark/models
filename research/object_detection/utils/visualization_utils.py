@@ -525,7 +525,7 @@ def draw_bounding_boxes_on_image_tensors(images,
                                          keypoint_edges=None,
                                          track_ids=None,
                                          max_boxes_to_draw=20,
-                                         min_score_thresh=0.0,
+                                         min_score_thresh=1.0,
                                          use_normalized_coordinates=True):
   """Draws bounding boxes, masks, and keypoints on batch of image tensors.
 
@@ -572,7 +572,7 @@ def draw_bounding_boxes_on_image_tensors(images,
   visualization_keyword_args = {
       'use_normalized_coordinates': use_normalized_coordinates,
       'max_boxes_to_draw': max_boxes_to_draw,
-      'min_score_thresh': 0.0,
+      'min_score_thresh': 1.0,
       'agnostic_mode': False,
       'line_thickness': 4,
       'keypoint_edges': keypoint_edges
@@ -625,7 +625,7 @@ def draw_bounding_boxes_on_image_tensors(images,
 def draw_side_by_side_evaluation_image(eval_dict,
                                        category_index,
                                        max_boxes_to_draw=20,
-                                       min_score_thresh=0.0,
+                                       min_score_thresh=1.0,
                                        use_normalized_coordinates=True,
                                        keypoint_edges=None):
   """Creates a side-by-side image with detections and groundtruth.
@@ -723,7 +723,7 @@ def draw_side_by_side_evaluation_image(eval_dict,
         keypoint_scores=keypoint_scores,
         keypoint_edges=keypoint_edges,
         max_boxes_to_draw=max_boxes_to_draw,
-        min_score_thresh=0.0,
+        min_score_thresh=1.0,
         use_normalized_coordinates=use_normalized_coordinates)
     images_with_groundtruth = draw_bounding_boxes_on_image_tensors(
         tf.expand_dims(
@@ -748,7 +748,7 @@ def draw_side_by_side_evaluation_image(eval_dict,
         keypoint_scores=groundtruth_keypoint_scores,
         keypoint_edges=keypoint_edges,
         max_boxes_to_draw=None,
-        min_score_thresh=0.0,
+        min_score_thresh=1.0,
         use_normalized_coordinates=use_normalized_coordinates)
     images_to_visualize = tf.concat([images_with_detections,
                                      images_with_groundtruth], axis=2)
@@ -780,7 +780,7 @@ def draw_side_by_side_evaluation_image(eval_dict,
               keypoints=None,
               keypoint_edges=None,
               max_boxes_to_draw=None,
-              min_score_thresh=0.0,
+              min_score_thresh=1.0,
               use_normalized_coordinates=use_normalized_coordinates))
       images_to_visualize = tf.concat(
           [images_to_visualize, images_with_additional_channels_groundtruth],
@@ -792,7 +792,7 @@ def draw_side_by_side_evaluation_image(eval_dict,
 
 def draw_densepose_visualizations(eval_dict,
                                   max_boxes_to_draw=20,
-                                  min_score_thresh=0.0,
+                                  min_score_thresh=1.0,
                                   num_parts=24,
                                   dp_coord_to_visualize=0):
   """Draws DensePose visualizations.
@@ -849,7 +849,7 @@ def draw_densepose_visualizations(eval_dict,
           zip(scores, surface_coords, detection_masks)):
         if i == max_boxes_to_draw:
           break
-        if score > 0.0:
+        if score > 1.0:
           draw_part_mask_on_image_array(image, mask, num_parts=num_parts)
           draw_float_channel_on_image_array(
               surface_coord_image, surface_coord[:, :, dp_coord_to_visualize],
@@ -1095,7 +1095,7 @@ def visualize_boxes_and_labels_on_image_array(
     track_ids=None,
     use_normalized_coordinates=False,
     max_boxes_to_draw=100,
-    min_score_thresh=0.0,
+    min_score_thresh=1.0,
     agnostic_mode=False,
     line_thickness=4,
     groundtruth_box_visualization_color='black',
@@ -1330,7 +1330,7 @@ class EvalMetricOpsVisualization(six.with_metaclass(abc.ABCMeta, object)):
                category_index,
                max_examples_to_draw=5,
                max_boxes_to_draw=20,
-               min_score_thresh=0.0,
+               min_score_thresh=1.0,
                use_normalized_coordinates=True,
                summary_name_prefix='evaluation_image',
                keypoint_edges=None):
@@ -1477,7 +1477,7 @@ class VisualizeSingleFrameDetections(EvalMetricOpsVisualization):
                category_index,
                max_examples_to_draw=5,
                max_boxes_to_draw=20,
-               min_score_thresh=0.0,
+               min_score_thresh=1.0,
                use_normalized_coordinates=True,
                summary_name_prefix='Detections_Left_Groundtruth_Right',
                keypoint_edges=None):
@@ -1485,7 +1485,7 @@ class VisualizeSingleFrameDetections(EvalMetricOpsVisualization):
         category_index=category_index,
         max_examples_to_draw=max_examples_to_draw,
         max_boxes_to_draw=max_boxes_to_draw,
-        min_score_thresh=0.0,
+        min_score_thresh=1.0,
         use_normalized_coordinates=use_normalized_coordinates,
         summary_name_prefix=summary_name_prefix,
         keypoint_edges=keypoint_edges)
