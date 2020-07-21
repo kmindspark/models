@@ -69,7 +69,7 @@ class DETRMetaArch(model.DetectionModel):
     self._image_resizer_fn = image_resizer_fn
     self.num_queries = 100
     self.hidden_dimension = 128
-    self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=False)
+    self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=is_training)
     self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()
     #for layer in self.first_stage.layers:
     #  layer.trainable = False
@@ -95,6 +95,7 @@ class DETRMetaArch(model.DetectionModel):
                                                 tf.keras.layers.Dense(4, activation="sigmoid")])
     self.is_training = is_training
     self._second_stage_score_conversion_fn = second_stage_score_conversion_fn
+    print("CONSTRUCTOR TRAINING", self.is_training)
   @property
   def first_stage_feature_extractor_scope(self):
     return 'FirstStageFeatureExtractor'
@@ -115,17 +116,13 @@ class DETRMetaArch(model.DetectionModel):
     #fake_logits[:,:,5] = 1
     #logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
 
+    #print("Encoded bboxes")
+    #print(bboxes_encoded)
     #print(logits)
-    #bboxes_encoded = self._bbox_ffn(bboxes_encoded) #tf.keras.backend.sigmoid(bboxes_encoded)
-    #bboxes_encoded = ops.normalized_to_image_coordinates(
-    #    bboxes_encoded, image_shape, self._parallel_iterations)
-    print("Encoded bboxes")
-    print(bboxes_encoded)
-    print(logits)
     #print(self.queries)
+
     reshaped_bboxes = tf.reshape(bboxes_encoded, [bboxes_encoded.shape[0] * bboxes_encoded.shape[1], 1, bboxes_encoded.shape[2]])
     batches_queries = tf.repeat(tf.expand_dims(self.num_queries, 0), x.shape[0], axis=0)
-    #print("Queries", self.queries)
     return {
       "refined_box_encodings": reshaped_bboxes,
       "class_predictions_with_background": logits,
@@ -378,9 +375,9 @@ class DETRMetaArch(model.DetectionModel):
         losses_mask = tf.stack(self.groundtruth_lists(
             fields.InputDataFields.is_annotated))
 
-      print("LOSS: encodings and targets")
-      print(reshaped_refined_box_encodings)
-      print(batch_reg_targets)
+      #print("LOSS: encodings and targets")
+      #print(reshaped_refined_box_encodings)
+      #print(batch_reg_targets)
       second_stage_loc_losses = 5 * self._localization_loss(
           reshaped_refined_box_encodings,
           batch_reg_targets,
@@ -397,7 +394,7 @@ class DETRMetaArch(model.DetectionModel):
         xmin = xcenter - w / 2.
         ymax = ycenter + h / 2.
         xmax = xcenter + w / 2.
-        print("RESULT", tf.stack([ymin, xmin, ymax, xmax], axis=1))
+        #print("RESULT", tf.stack([ymin, xmin, ymax, xmax], axis=1))
         return tf.squeeze(tf.stack([ymin, xmin, ymax, xmax], axis=1))
 
       my_loc_loss = self._localization_loss_iou(
@@ -413,7 +410,7 @@ class DETRMetaArch(model.DetectionModel):
       second_stage_loc_losses += 2 * my_loc_loss/normalizer
       #print(my_loc_loss * 5/normalizer)
 
-      print("CLASSLOSS: ", class_predictions_with_background, batch_cls_targets_with_background)
+      #print("CLASSLOSS: ", class_predictions_with_background, batch_cls_targets_with_background)
       second_stage_cls_losses = ops.reduce_sum_trailing_dimensions(
           self._classification_loss(
               class_predictions_with_background,
@@ -429,7 +426,7 @@ class DETRMetaArch(model.DetectionModel):
           second_stage_cls_losses * tf.cast(paddings_indicator,
                                             dtype=tf.float32))
 
-      print("LOC LOSS", second_stage_loc_loss)
+      #print("LOC LOSS", second_stage_loc_loss)
 
       localization_loss = tf.multiply(self._second_stage_loc_loss_weight,
                                       second_stage_loc_loss,
@@ -827,7 +824,6 @@ class DETRMetaArch(model.DetectionModel):
           raw detection boxes. The value total_detections is the number of
           second stage anchors (i.e. the total number of boxes before NMS).
     """
-    print("ORIG", refined_box_encodings)
     clip_window = self._compute_clip_window(image_shapes)
     refined_box_encodings_batch = tf.reshape(
         refined_box_encodings,
@@ -840,7 +836,6 @@ class DETRMetaArch(model.DetectionModel):
     )
     refined_decoded_boxes_batch = tf.squeeze(self._batch_decode_boxes(
         tf.expand_dims(refined_box_encodings_batch, axis=2), proposal_boxes), axis=2)
-    print("REFINED DECODED", refined_box_encodings_batch)
     refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(refined_decoded_boxes_batch, image_shape=orig_image_shapes, temp=True)
     class_predictions_with_background_batch_normalized = self._second_stage_score_conversion_fn(class_predictions_with_background_batch) 
     class_predictions_batch = tf.reshape(class_predictions_with_background_batch_normalized, [-1, self.num_queries, self.num_classes + 1])
