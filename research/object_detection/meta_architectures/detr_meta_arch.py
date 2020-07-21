@@ -1029,8 +1029,8 @@ class DETRMetaArch(model.DetectionModel):
     with tf.name_scope(scope, 'ChangeCoordinateFrame'):
       win_height = window[2] - window[0]
       win_width = window[3] - window[1]
-      boxlist_new = scale(box_list.BoxList(
+      boxlist_new = box_list_ops.scale(box_list.BoxList(
           boxlist.get() - [window[0], window[1], window[0], window[1]]),
                           1.0 / win_height, 1.0 / win_width)
-      boxlist_new = _copy_extra_fields(boxlist_new, boxlist)
+      boxlist_new = box_list_ops._copy_extra_fields(boxlist_new, boxlist)
       return boxlist_new
