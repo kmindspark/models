@@ -1074,4 +1074,4 @@ class DETRMetaArch(model.DetectionModel):
     if change_coordinate_frame:
       sorted_boxes = box_list_ops.change_coordinate_frame(sorted_boxes,
                                                           clip_window)
-    return sorted_boxes, num_valid_nms_boxes_cumulative
+    return sorted_boxes.get()
