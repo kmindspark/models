@@ -870,7 +870,6 @@ class DETRMetaArch(model.DetectionModel):
     print(nmsed_scores)
 
     nmsed_boxes = shape_utils.static_or_dynamic_map_fn(self.change_coordinate_frame, [nmsed_boxes, clip_window])
-    nmsed_boxes = nmsed_boxes.get()
 
     detections = {
         fields.DetectionResultFields.detection_boxes:
@@ -1033,4 +1032,4 @@ class DETRMetaArch(model.DetectionModel):
           boxlist.get() - [window[0], window[1], window[0], window[1]]),
                           1.0 / win_height, 1.0 / win_width)
       boxlist_new = box_list_ops._copy_extra_fields(boxlist_new, boxlist)
-      return boxlist_new
+      return boxlist_new.get()
