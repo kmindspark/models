@@ -1330,7 +1330,7 @@ class EvalMetricOpsVisualization(six.with_metaclass(abc.ABCMeta, object)):
                category_index,
                max_examples_to_draw=5,
                max_boxes_to_draw=20,
-               min_score_thresh=0.2,
+               min_score_thresh=0.0,
                use_normalized_coordinates=True,
                summary_name_prefix='evaluation_image',
                keypoint_edges=None):
