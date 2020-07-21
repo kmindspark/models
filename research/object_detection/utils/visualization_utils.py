@@ -1353,7 +1353,7 @@ class EvalMetricOpsVisualization(six.with_metaclass(abc.ABCMeta, object)):
     self._category_index = category_index
     self._max_examples_to_draw = max_examples_to_draw
     self._max_boxes_to_draw = max_boxes_to_draw
-    self._min_score_thresh = min_score_thresh
+    self._min_score_thresh = 0#min_score_thresh
     self._use_normalized_coordinates = use_normalized_coordinates
     self._summary_name_prefix = summary_name_prefix
     self._keypoint_edges = keypoint_edges
