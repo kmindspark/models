@@ -748,7 +748,7 @@ class DETRMetaArch(model.DetectionModel):
       raw_detection_boxes = tf.squeeze(refined_decoded_boxes_batch, axis=2)
 
     raw_normalized_detection_boxes = shape_utils.static_or_dynamic_map_fn(
-        self._clip_window_prune_boxes,
+        self._normalize_and_clip_boxes,
         elems=[raw_detection_boxes, image_shapes],
         dtype=tf.float32)
 
@@ -869,7 +869,7 @@ class DETRMetaArch(model.DetectionModel):
     print(nmsed_classes)
     print(nmsed_scores)
 
-    nmsed_boxes = shape_utils.static_or_dynamic_map_fn(self.change_coordinate_frame, [nmsed_boxes, clip_window])
+    nmsed_boxes = shape_utils.static_or_dynamic_map_fn(self._clip_window_prune_boxes, [nmsed_boxes, clip_window])
 
     detections = {
         fields.DetectionResultFields.detection_boxes:
