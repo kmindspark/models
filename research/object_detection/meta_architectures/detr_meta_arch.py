@@ -1031,7 +1031,7 @@ class DETRMetaArch(model.DetectionModel):
       boxlist_new = box_list_ops._copy_extra_fields(boxlist_new, boxlist)
       return boxlist_new.get()
 
-  def _clip_window_prune_boxes(self, sorted_boxesandclip_window, pad_to_max_output_size=False,
+  def _clip_window_prune_boxes(self, sorted_boxesandclip_window, pad_to_max_output_size=True,
                              change_coordinate_frame=True):
     """Prune boxes with zero area.
 
