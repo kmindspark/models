@@ -505,7 +505,7 @@ class DETRMetaArch(model.DetectionModel):
         rpn_features_to_crop is not in the prediction_dict.
     """
     with tf.name_scope('SecondStagePostprocessor'):
-      detections_dict = self._postprocess_box_classifier(
+      detections_dict = self._postprocess_box_classifier_new(
           prediction_dict['refined_box_encodings'],
           prediction_dict['class_predictions_with_background'],
           prediction_dict['proposal_boxes'],
@@ -825,6 +825,7 @@ class DETRMetaArch(model.DetectionModel):
           raw detection boxes. The value total_detections is the number of
           second stage anchors (i.e. the total number of boxes before NMS).
     """
+    print("ORIG", refined_box_encodings)
     refined_box_encodings_batch = tf.reshape(
         refined_box_encodings,
         [-1,
@@ -836,9 +837,9 @@ class DETRMetaArch(model.DetectionModel):
     )
     refined_decoded_boxes_batch = tf.squeeze(self._batch_decode_boxes(
         tf.expand_dims(refined_box_encodings_batch, axis=2), proposal_boxes), axis=2)
-    print("REFINED DEDCODED", refined_box_encodings_batch)
+    print("REFINED DECODED", refined_box_encodings_batch)
     #refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(refined_decoded_boxes_batch, image_shape=orig_image_shapes, temp=True)
-    class_predictions_with_background_batch_normalized = class_predictions_with_background_batch 
+    class_predictions_with_background_batch_normalized = self._second_stage_score_conversion_fn(class_predictions_with_background_batch) 
     class_predictions_batch = tf.reshape(class_predictions_with_background_batch_normalized, [-1, self.num_queries, self.num_classes + 1])
 
     batch_size = shape_utils.combined_static_and_dynamic_shape(
@@ -857,8 +858,13 @@ class DETRMetaArch(model.DetectionModel):
 
     non_background_mask = tf.cast(tf.greater_equal(nmsed_classes, 1), tf.float32)
     nmsed_boxes = tf.multiply(tf.repeat(tf.expand_dims(non_background_mask, axis=2), axis=2, repeats=4), nmsed_boxes)
-    nmsed_classes = tf.multiply(tf.cast(nmsed_classes, tf.float32), non_background_mask)
+    nmsed_classes = tf.multiply(tf.cast(nmsed_classes, tf.float32), non_background_mask) - tf.ones_like(nmsed_classes)
     nmsed_scores = tf.multiply(nmsed_scores, non_background_mask)
+
+    print("NMSED")
+    print(nmsed_boxes)
+    print(nmsed_classes)
+    print(nmsed_scores)
 
     detections = {
         fields.DetectionResultFields.detection_boxes:
