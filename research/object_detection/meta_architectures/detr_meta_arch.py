@@ -505,7 +505,7 @@ class DETRMetaArch(model.DetectionModel):
         rpn_features_to_crop is not in the prediction_dict.
     """
     with tf.name_scope('SecondStagePostprocessor'):
-      detections_dict = self._postprocess_box_classifier_new(
+      detections_dict = self._postprocess_box_classifier(
           prediction_dict['refined_box_encodings'],
           prediction_dict['class_predictions_with_background'],
           prediction_dict['proposal_boxes'],
@@ -688,6 +688,7 @@ class DETRMetaArch(model.DetectionModel):
           raw detection boxes. The value total_detections is the number of
           second stage anchors (i.e. the total number of boxes before NMS).
     """
+    #print("ORIG: ", refined_box_encodings)
     refined_box_encodings_batch = tf.reshape(
         refined_box_encodings,
         [-1,
@@ -752,11 +753,11 @@ class DETRMetaArch(model.DetectionModel):
 
     detections = {
         fields.DetectionResultFields.detection_boxes:
-            tf.convert_to_tensor([[[0.4, 0.4, 0.5, 0.5]]]), #nmsed_boxes,
+            nmsed_boxes,
         fields.DetectionResultFields.detection_scores:
-            tf.convert_to_tensor([[0.8]]),
+            nmsed_scores,
         fields.DetectionResultFields.detection_classes:
-            tf.convert_to_tensor([[1]]),
+            nmsed_classes,
         fields.DetectionResultFields.detection_multiclass_scores:
             nmsed_additional_fields['multiclass_scores'],
         fields.DetectionResultFields.detection_anchor_indices:
