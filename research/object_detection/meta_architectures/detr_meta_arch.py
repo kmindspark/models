@@ -870,7 +870,7 @@ class DETRMetaArch(model.DetectionModel):
         fields.DetectionResultFields.detection_boxes:
             nmsed_boxes,
         fields.DetectionResultFields.detection_scores:
-            tf.ones_like(nmsed_scores, dtype=tf.float32),
+            nmsed_scores,
         fields.DetectionResultFields.detection_classes:
             nmsed_classes,
         fields.DetectionResultFields.detection_multiclass_scores:
