@@ -866,6 +866,8 @@ class DETRMetaArch(model.DetectionModel):
 
     nmsed_boxes = shape_utils.static_or_dynamic_map_fn(self._clip_window_prune_boxes, [nmsed_boxes, clip_window])
 
+    print("AFTER MAP", nmsed_boxes)
+
     detections = {
         fields.DetectionResultFields.detection_boxes:
             nmsed_boxes,
