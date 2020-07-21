@@ -20,6 +20,7 @@ from object_detection.utils import variables_helper
 
 from object_detection.meta_architectures import detr_transformer
 from object_detection.matchers import hungarian_matcher
+from object_detection.core import post_processing
 
 class DETRMetaArch(model.DetectionModel):
   def __init__(self,
@@ -827,6 +828,7 @@ class DETRMetaArch(model.DetectionModel):
           second stage anchors (i.e. the total number of boxes before NMS).
     """
     print("ORIG", refined_box_encodings)
+    clip_window = self._compute_clip_window(image_shapes)
     refined_box_encodings_batch = tf.reshape(
         refined_box_encodings,
         [-1,
