@@ -58,8 +58,16 @@ class HungarianBipartiteMatcher(matcher.Matcher):
     num_valid_rows = tf.reduce_sum(tf.cast(valid_rows, dtype=tf.float32))
     #numpy_distance = distance_matrix.numpy()
     #print(numpy_distance)
+
+    def my_numpy_function(input_matrix):
+      row_indices, col_indices = linear_sum_assignment(input_matrix)
+      match_results = np.full(input_matrix.shape[1], -1)
+      for i in range(len(col_indices)):
+        match_results[col_indices[i]] = row_indices[i]
+      return match_result
+
     
-    my_result = tf.autograph.experimental.do_not_convert(tf.numpy_function(func=linear_sum_assignment,
+    my_result = tf.autograph.experimental.do_not_convert(tf.numpy_function(func=my_numpy_function,
                                                  inp=[distance_matrix],
                                                  Tout=[tf.float32, tf.float32]))
                                                  #tf.autograph.experimental.do_not_convert(
