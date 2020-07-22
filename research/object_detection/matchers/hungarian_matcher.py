@@ -56,15 +56,21 @@ class HungarianBipartiteMatcher(matcher.Matcher):
                                      tf.squeeze(tf.where(valid_rows), axis=-1))
     distance_matrix = -1 * valid_row_sim_matrix
     num_valid_rows = tf.reduce_sum(tf.cast(valid_rows, dtype=tf.float32))
-    numpy_distance = distance_matrix.numpy()
+    #numpy_distance = distance_matrix.numpy()
     #print(numpy_distance)
-    row_indices, col_indices = linear_sum_assignment(numpy_distance)
-    match_results = np.full(numpy_distance.shape[1], -1)
     
-    for i in range(len(col_indices)):
-        match_results[col_indices[i]] = row_indices[i] 
+    row_indices, col_indices = tf.autograph.experimental.do_not_convert(
+                                                 tf.numpy_function(func=linear_sum_assignment,
+                                                 inp=[distance_matrix],
+                                                 Tout=tf.float32))
+    print("DID IT")
+    
+    #match_results = np.full(numpy_distance.shape[1], -1)
+    
+    #for i in range(len(col_indices)):
+    #    match_results[col_indices[i]] = row_indices[i] 
 
-    match_results = tf.convert_to_tensor(match_results)
+    #match_results = tf.convert_to_tensor(match_results)
     match_results = tf.reshape(match_results, [-1])
     match_results = tf.cast(match_results, tf.int32)
 
