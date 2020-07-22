@@ -81,5 +81,5 @@ class HungarianBipartiteMatcher(matcher.Matcher):
     #match_results = tf.convert_to_tensor(match_results)
     #match_results = tf.reshape(match_results, [-1])
     #match_results = tf.cast(match_results, tf.int32)
-    return(my_result)
+    print(my_result)
     return my_result #match_results
