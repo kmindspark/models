@@ -67,7 +67,7 @@ class HungarianBipartiteMatcher(matcher.Matcher):
       return match_results.astype(np.int32)
 
     def numpy_wrapper(inputs):
-      return tf.numpy_function(my_numpy_function, inputs, Tout=tf.int32)
+      return tf.numpy_function(my_numpy_function, inputs, Tout=[tf.int32])
     
     my_result = tf.autograph.experimental.do_not_convert(numpy_wrapper)([distance_matrix])
                                                  #tf.autograph.experimental.do_not_convert(
@@ -82,4 +82,5 @@ class HungarianBipartiteMatcher(matcher.Matcher):
     #match_results = tf.reshape(match_results, [-1])
     #match_results = tf.cast(match_results, tf.int32)
     print(my_result)
-    return my_result #match_results
+    print(tf.shape(my_result))
+    return tf.reshape(my_result, [-1]) #match_results
