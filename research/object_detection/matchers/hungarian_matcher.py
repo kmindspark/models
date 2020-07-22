@@ -66,10 +66,10 @@ class HungarianBipartiteMatcher(matcher.Matcher):
         match_results[col_indices[i]] = row_indices[i]
       return match_results
 
+    def numpy_wrapper(inputs):
+      return tf.numpy_function(my_numpy_function, inputs, Tout=[tf.float32, tf.float32])
     
-    my_result = tf.autograph.experimental.do_not_convert(tf.numpy_function(func=my_numpy_function,
-                                                 inp=[distance_matrix],
-                                                 Tout=[tf.float32, tf.float32]))
+    my_result = tf.autograph.experimental.do_not_convert(numpy_wrapper)([distance_matrix])
                                                  #tf.autograph.experimental.do_not_convert(
     print("DID IT")
     
