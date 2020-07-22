@@ -59,9 +59,9 @@ class HungarianBipartiteMatcher(matcher.Matcher):
     #numpy_distance = distance_matrix.numpy()
     #print(numpy_distance)
     
-    row_indices, col_indices = tf.numpy_function(func=linear_sum_assignment,
+    my_result = tf.autograph.experimental.do_not_convert(tf.numpy_function(func=linear_sum_assignment,
                                                  inp=[distance_matrix],
-                                                 Tout=[tf.float32, tf.float32])
+                                                 Tout=[tf.float32, tf.float32]))
                                                  #tf.autograph.experimental.do_not_convert(
     print("DID IT")
     
@@ -71,7 +71,7 @@ class HungarianBipartiteMatcher(matcher.Matcher):
     #    match_results[col_indices[i]] = row_indices[i] 
 
     #match_results = tf.convert_to_tensor(match_results)
-    match_results = tf.reshape(match_results, [-1])
-    match_results = tf.cast(match_results, tf.int32)
+    #match_results = tf.reshape(match_results, [-1])
+    #match_results = tf.cast(match_results, tf.int32)
 
-    return match_results
+    return my_result #match_results
