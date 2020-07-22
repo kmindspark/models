@@ -1,4 +1,4 @@
-# Copyright 2017 The TensorFlow Authors. All Rights Reserved.
+# Copyright 2020 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,33 +13,24 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Bipartite matcher implementation."""
+"""Hungarian bipartite matcher implementation."""
 
 import tensorflow.compat.v1 as tf
+import numpy as np
 
 from object_detection.core import matcher
 from scipy.optimize import linear_sum_assignment
-import numpy as np
 
 class HungarianBipartiteMatcher(matcher.Matcher):
   """Wraps a Tensorflow greedy bipartite matcher."""
 
-  def __init__(self, use_matmul_gather=False):
-    """Constructs a Matcher.
+  def __init__(self):
+    """Constructs a Matcher."""
 
-    Args:
-      use_matmul_gather: Force constructed match objects to use matrix
-        multiplication based gather instead of standard tf.gather.
-        (Default: False).
-    """
-    super(HungarianBipartiteMatcher, self).__init__(
-        use_matmul_gather=use_matmul_gather)
+    super(HungarianBipartiteMatcher, self).__init__()
 
   def _match(self, similarity_matrix, valid_rows):
-    """Bipartite matches a collection rows and columns. A greedy bi-partite.
-
-    TODO(rathodv): Add num_valid_columns options to match only that many columns
-    with all the rows.O
+    """Optimally bipartite matches a collection rows and columns.
 
     Args:
       similarity_matrix: Float tensor of shape [N, M] with pairwise similarity
@@ -55,32 +46,18 @@ class HungarianBipartiteMatcher(matcher.Matcher):
     valid_row_sim_matrix = tf.gather(similarity_matrix,
                                      tf.squeeze(tf.where(valid_rows), axis=-1))
     distance_matrix = -1 * valid_row_sim_matrix
-    num_valid_rows = tf.reduce_sum(tf.cast(valid_rows, dtype=tf.float32))
-    #numpy_distance = distance_matrix.numpy()
-    #print(numpy_distance)
-
-    def my_numpy_function(input_matrix):
-      row_indices, col_indices = linear_sum_assignment(input_matrix)
-      match_results = np.full(input_matrix.shape[1], -1)
-      for i in range(len(col_indices)):
-        match_results[col_indices[i]] = row_indices[i]
-      return match_results.astype(np.int32)
 
     def numpy_wrapper(inputs):
-      return tf.numpy_function(my_numpy_function, inputs, Tout=[tf.int32])
-    
-    my_result = tf.autograph.experimental.do_not_convert(numpy_wrapper)([distance_matrix])
-                                                 #tf.autograph.experimental.do_not_convert(
-    print("DID IT")
-    
-    #match_results = np.full(numpy_distance.shape[1], -1)
-    
-    #for i in range(len(col_indices)):
-    #    match_results[col_indices[i]] = row_indices[i] 
+      def numpy_matching(input_matrix):
+        row_indices, col_indices = linear_sum_assignment(input_matrix)
+        match_results = np.full(input_matrix.shape[1], -1)
+        for i in range(len(col_indices)):
+          match_results[col_indices[i]] = row_indices[i]
+        return match_results.astype(np.int32)
 
-    #match_results = tf.convert_to_tensor(match_results)
-    #match_results = tf.reshape(match_results, [-1])
-    #match_results = tf.cast(match_results, tf.int32)
-    print(my_result)
-    print(tf.shape(my_result))
-    return tf.reshape(my_result, [-1]) #match_results
+      return tf.numpy_function(numpy_matching, inputs, Tout=[tf.int32])
+
+    matching_result = tf.autograph.experimental.do_not_convert(
+                        numpy_wrapper)([distance_matrix])
+    
+    return tf.reshape(matching_result, [-1])

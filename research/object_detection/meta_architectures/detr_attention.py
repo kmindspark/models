@@ -88,8 +88,8 @@ class Attention(tf.keras.layers.Layer):
         "attention_dropout": self.attention_dropout,
     }
 
-  def call(self, query_input, key_input, value_input, bias, training, cache=None,
-           decode_loop_step=None, use_bias=True):
+  def call(self, query_input, key_input, value_input, training, cache=None,
+           decode_loop_step=None):
     """Apply attention mechanism to query_input and source_input.
 
     Args:
@@ -165,7 +165,7 @@ class Attention(tf.keras.layers.Layer):
 class SelfAttention(Attention):
   """Multiheaded self-attention layer."""
 
-  def call(self, query_input, value_input, bias, training, cache=None,
-           decode_loop_step=None, use_bias=False):
+  def call(self, query_input, value_input, training, cache=None,
+           decode_loop_step=None):
     return super(SelfAttention, self).call(
-        query_input, query_input, value_input, bias, training, cache, decode_loop_step, use_bias=use_bias)
+        query_input, query_input, value_input, training, cache, decode_loop_step)
