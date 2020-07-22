@@ -375,9 +375,11 @@ class DETRMetaArch(model.DetectionModel):
         losses_mask = tf.stack(self.groundtruth_lists(
             fields.InputDataFields.is_annotated))
 
-      #print("LOSS: encodings and targets")
-      #print(reshaped_refined_box_encodings)
-      #print(batch_reg_targets)
+      print("LOSS: encodings and targets")
+      print(reshaped_refined_box_encodings)
+      print(batch_reg_targets)
+      print(class_predictions_with_background)
+      print(batch_cls_targets_with_background)
       second_stage_loc_losses = 5 * self._localization_loss(
           reshaped_refined_box_encodings,
           batch_reg_targets,
@@ -413,7 +415,7 @@ class DETRMetaArch(model.DetectionModel):
       #print("CLASSLOSS: ", class_predictions_with_background, batch_cls_targets_with_background)
 
       print("SHAPE", batch_cls_weights.shape)
-      batch_cls_weights = tf.concat([tf.expand_dims(batch_cls_weights[:, :, 0], axis=2), batch_cls_weights[:, :, 1:] / 10], axis=-1)
+      #batch_cls_weights = tf.concat([tf.expand_dims(batch_cls_weights[:, :, 0], axis=2), batch_cls_weights[:, :, 1:] / 10], axis=-1)
 
       second_stage_cls_losses = ops.reduce_sum_trailing_dimensions(
           self._classification_loss(
