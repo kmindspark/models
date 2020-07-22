@@ -68,14 +68,14 @@ class DETRMetaArch(model.DetectionModel):
     super(DETRMetaArch, self).__init__(num_classes=num_classes)
     self._image_resizer_fn = image_resizer_fn
     self.num_queries = 100
-    self.hidden_dimension = 128
+    self.hidden_dimension = 256
     self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=is_training)
     self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()
     #for layer in self.first_stage.layers:
     #  layer.trainable = False
     self.target_assigner = target_assigner.create_target_assigner('DETR', 'detection')
-    self.transformer_args = {"hidden_size": self.hidden_dimension, "attention_dropout": 0.05, "num_heads": 8, "layer_postprocess_dropout": 0, "dtype": tf.float32, 
-      "num_hidden_layers": 4, "filter_size": 128, "relu_dropout": 0.05}
+    self.transformer_args = {"hidden_size": self.hidden_dimension, "attention_dropout": 0.1, "num_heads": 8, "layer_postprocess_dropout": 0.1, "dtype": tf.float32, 
+      "num_hidden_layers": 4, "filter_size": 256, "relu_dropout": 0.1}
     self.transformer = detr_transformer.Transformer(self.transformer_args)
     #self.ffn = self.feature_extractor.get_box_classifier_feature_extractor_model()
     #self.bboxes = tf.keras.layers.Dense(4)
@@ -89,7 +89,7 @@ class DETRMetaArch(model.DetectionModel):
     self._second_stage_cls_loss_weight = second_stage_classification_loss_weight
     self._box_coder = self.target_assigner.get_box_coder()
     self._parallel_iterations = parallel_iterations
-    self._post_filter = tf.keras.layers.Conv2D(128, 1)
+    self._post_filter = tf.keras.layers.Conv2D(256, 1)
     self._second_stage_nms_fn = second_stage_non_max_suppression_fn
     self._box_ffn = tf.keras.Sequential(layers=[tf.keras.layers.Dense(self.hidden_dimension, activation="relu"),
                                                 tf.keras.layers.Dense(4, activation="sigmoid")])

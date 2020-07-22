@@ -267,7 +267,7 @@ def eager_train_step(detection_model,
   #print("VARNAMES", new_list)
   for i in range(len(trainable_variables)):
     if not (trainable_variables[i].name.startswith("conv2d") or trainable_variables[i].name.startswith("transformer")):
-      print("Reducing gradient")
+      #print("Reducing gradient")
       gradients[i] /= 10
 
   if clip_gradients_value:
