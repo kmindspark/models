@@ -64,7 +64,7 @@ class HungarianBipartiteMatcher(matcher.Matcher):
       match_results = np.full(input_matrix.shape[1], -1)
       for i in range(len(col_indices)):
         match_results[col_indices[i]] = row_indices[i]
-      return match_result
+      return match_results
 
     
     my_result = tf.autograph.experimental.do_not_convert(tf.numpy_function(func=my_numpy_function,
