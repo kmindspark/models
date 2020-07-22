@@ -261,6 +261,9 @@ def eager_train_step(detection_model,
   gradients = tape.gradient(total_loss, trainable_variables)
 
   print("TYPE: ", type(trainable_variables))
+  new_list = []
+  for i in range(len(trainable_variables)):
+    new_list.append(trainable_variables[i].name)
   for i in range(len(trainable_variables)):
     if (trainable_variables[i].name.startswith("FirstStage")):
       print("Reducing gradient")
