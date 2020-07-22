@@ -107,7 +107,9 @@ class DETRMetaArch(model.DetectionModel):
 
   def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
     image_shape = tf.shape(preprocessed_inputs)
-    x = self._post_filter(self.first_stage(preprocessed_inputs, training=self.is_training))
+    with tf.name_scope("FirstStage"):
+      x = self.first_stage(preprocessed_inputs, training=self.is_training)
+    x = self._post_filter(x)
     x = tf.reshape(x, [x.shape[0], x.shape[1] * x.shape[2], x.shape[3]])
     x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)], training=self.is_training)
     bboxes_encoded, logits = self._box_ffn(x), self.cls(x)

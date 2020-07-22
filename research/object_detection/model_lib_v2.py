@@ -260,6 +260,11 @@ def eager_train_step(detection_model,
 
   gradients = tape.gradient(total_loss, trainable_variables)
 
+  for i in range(len(trainable_variables)):
+    if (trainable_variables[i].name.startswith("FirstStage")):
+      print("Reducing gradient")
+      gradients[i] /= 10
+
   if clip_gradients_value:
     gradients, _ = tf.clip_by_global_norm(gradients, clip_gradients_value)
   optimizer.apply_gradients(zip(gradients, trainable_variables))
