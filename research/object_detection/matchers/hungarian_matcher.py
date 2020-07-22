@@ -64,7 +64,7 @@ class HungarianBipartiteMatcher(matcher.Matcher):
       match_results = np.full(input_matrix.shape[1], -1)
       for i in range(len(col_indices)):
         match_results[col_indices[i]] = row_indices[i]
-      return match_results
+      return match_results.astype(np.int32)
 
     def numpy_wrapper(inputs):
       return tf.numpy_function(my_numpy_function, inputs, Tout=[tf.float32, tf.float32])
