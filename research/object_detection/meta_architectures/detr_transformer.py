@@ -24,48 +24,14 @@ from __future__ import print_function
 import tensorflow as tf
 from official.nlp.modeling.layers import position_embedding
 from object_detection.meta_architectures import detr_attention as attention_layer
-from official.nlp.transformer import beam_search
-from official.nlp.transformer import embedding_layer
 from official.nlp.transformer import ffn_layer
-from official.nlp.transformer import metrics
 from official.nlp.transformer import model_utils
 from official.nlp.transformer.utils.tokenizer import EOS_ID
-
-# Disable the not-callable lint error, since it claims many objects are not
-# callable when they actually are.
-# pylint: disable=not-callable
-
-
-def create_model(params, is_train):
-  """Creates transformer model."""
-  with tf.name_scope("model"):
-    if is_train:
-      inputs = tf.keras.layers.Input((None,), dtype="float32", name="inputs")
-      targets = tf.keras.layers.Input((None,), dtype="float32", name="targets")
-      internal_model = Transformer(params, name="transformer_v2")
-      logits = internal_model([inputs, targets], training=is_train)
-      label_smoothing = params["label_smoothing"]
-      logits = tf.keras.layers.Lambda(lambda x: x, name="logits",
-                                      dtype=tf.float32)(logits)
-      model = tf.keras.Model([inputs, targets], logits)
-      # TODO(reedwm): Can we do this loss in float16 instead of float32?
-      loss = metrics.transformer_loss(
-          logits, targets, label_smoothing, vocab_size)
-      model.add_loss(loss)
-      return model
-
-    else:
-      inputs = tf.keras.layers.Input((None,), dtype="int64", name="inputs")
-      internal_model = Transformer(params, name="transformer_v2")
-      ret = internal_model([inputs], training=is_train)
-      outputs, scores = ret["outputs"], ret["scores"]
-      return tf.keras.Model(inputs, [outputs, scores])
-
 
 class Transformer(tf.keras.Model):
   """Transformer model with Keras.
 
-  Implemented as described in: https://arxiv.org/pdf/1706.03762.pdf
+  Implemented as described in theEnd-to-End Object Detection with Transformers
 
   The Transformer model consists of an encoder and decoder. The input is an int
   sequence (or a batch of sequences). The encoder produces a continuous
@@ -81,9 +47,9 @@ class Transformer(tf.keras.Model):
       name: name of the model.
     """
     super(Transformer, self).__init__(name=name)
+    
+    
     self.params = params
-    #self.embedding_softmax_layer = embedding_layer.EmbeddingSharedWeights(
-    #    params["vocab_size"], params["hidden_size"])
     self.encoder_stack = EncoderStack(params)
     self.decoder_stack = DecoderStack(params)
     self.position_embedding = position_embedding.RelativePositionEmbedding(
