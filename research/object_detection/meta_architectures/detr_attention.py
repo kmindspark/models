@@ -146,8 +146,6 @@ class Attention(tf.keras.layers.Layer):
 
     # Calculate dot product attention
     logits = tf.einsum("BTNH,BFNH->BNFT", key, query)
-    if (use_bias):
-      logits += bias
     # Note that softmax internally performs math operations using float32
     # for numeric stability. When training with float16, we keep the input
     # and output in float16 for better performance.
