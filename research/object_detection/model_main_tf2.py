@@ -104,7 +104,7 @@ def main(unused_argv):
           model_dir=FLAGS.model_dir,
           train_steps=FLAGS.num_train_steps,
           use_tpu=FLAGS.use_tpu,
-          checkpoint_every_n=25)
+          checkpoint_every_n=500)
 
 if __name__ == '__main__':
   tf.compat.v1.app.run()
