@@ -494,7 +494,8 @@ class TwoDimensionalPositionEmbedding(tf.keras.layers.Layer):
       A tensor in shape of [length, hidden_size].
     """
     input_shape = tf_utils.get_shape_list(inputs)
-    per_axis_size = tf.math.sqrt(input_shape[1])
+    per_axis_size = math.sqrt(input_shape[1])
+    print("PER AXIS SIZE", per_axis_size)
     one_d_encoding = self._get_1d_encoding(per_axis_size)
     encoding_x = tf.repeat(one_d_encoding, repeats=per_axis_size, axis=0)
     encoding_y = tf.tile(one_d_encoding, multiples=[per_axis_size, 1])
