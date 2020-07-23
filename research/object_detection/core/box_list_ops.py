@@ -33,7 +33,7 @@ import tensorflow.compat.v1 as tf
 from object_detection.core import box_list
 from object_detection.utils import ops
 from object_detection.utils import shape_utils
-
+import tensorflow_addons as tfa
 
 class SortOrder(object):
   """Enum class for sort order.
@@ -311,6 +311,13 @@ def l1(boxlist1, boxlist2):
   heights = tf.abs(tf.expand_dims(height1, axis=0) - tf.expand_dims(tf.transpose(height2), axis=1))
   widths = tf.abs(tf.expand_dims(width1, axis=0) - tf.expand_dims(tf.transpose(width2), axis=1))
   return tf.transpose(ycenters + xcenters + heights + widths)
+
+def giou_loss(boxlist1, boxlist2):
+  N = boxlist1.num_boxes()
+  M = boxlist2.num_boxes()
+  boxes1 = tf.repeat(boxlist1.get(), repeats=M, axis=0)
+  boxes2 = tf.tile(boxlist2.get(), multiples=[N, 1])
+  return tf.reshape(tfa.losses.giou_loss(boxes1, boxes2), [N, M])
 
 def matched_iou(boxlist1, boxlist2, scope=None):
   """Compute intersection-over-union between corresponding boxes in boxlists.

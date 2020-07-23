@@ -96,7 +96,7 @@ class IouAndClassSimilarity(RegionSimilarityCalculator):
       A tensor with shape [N, M] representing pairwise iou scores.
     """
     classification_scores = tf.matmul(groundtruth_labels, predicted_labels, transpose_b=True) # - 5/400 * box_list_ops.l1(boxlist1, boxlist2)
-    return - 5 * box_list_ops.l1(boxlist1, boxlist2) + classification_scores + 2 * box_list_ops.iou(boxlist1, boxlist2) 
+    return -5 * box_list_ops.l1(boxlist1, boxlist2) + classification_scores + 2 * (1 - box_list_ops.giou_loss(boxlist1, boxlist2))
 
 class NegSqDistSimilarity(RegionSimilarityCalculator):
   """Class to compute similarity based on the squared distance metric.
@@ -116,7 +116,6 @@ class NegSqDistSimilarity(RegionSimilarityCalculator):
       A tensor with shape [N, M] representing negated pairwise squared distance.
     """
     return -1 * box_list_ops.sq_dist(boxlist1, boxlist2)
-
 
 class IoaSimilarity(RegionSimilarityCalculator):
   """Class to compute similarity based on Intersection over Area (IOA) metric.
