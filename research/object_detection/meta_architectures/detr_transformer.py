@@ -239,7 +239,7 @@ class EncoderStack(tf.keras.layers.Layer):
     self._relu_dropout = relu_dropout
     self._filter_size = filter_size
     self._num_hidden_layers = num_hidden_layers
-    self._layers = []
+    self.layers = []
 
   def build(self, input_shape):
     """Builds the encoder stack."""
@@ -251,7 +251,7 @@ class EncoderStack(tf.keras.layers.Layer):
       feed_forward_network = ffn_layer.FeedForwardNetwork(
           self._hidden_size, self._filter_size, self._relu_dropout)
 
-      self._layers.append([
+      self.layers.append([
           PrePostProcessingWrapper(self_attention_layer, self._layer_postprocess_dropout),
           PrePostProcessingWrapper(feed_forward_network, self._layer_postprocess_dropout)
       ])
@@ -286,8 +286,8 @@ class EncoderStack(tf.keras.layers.Layer):
       Output of encoder layer stack.
       float32 tensor with shape [batch_size, input_length, hidden_size]
     """
-    print(self._layers)
-    for n, layer in enumerate(self._layers):
+    print(self.layers)
+    for n, layer in enumerate(self.layers):
       # Run inputs through the sublayers.
       self_attention_layer = layer[0]
       feed_forward_network = layer[1]
@@ -328,7 +328,7 @@ class DecoderStack(tf.keras.layers.Layer):
     self._relu_dropout = relu_dropout
     self._filter_size = filter_size
     self._num_hidden_layers = num_hidden_layers
-    self._layers = []
+    self.layers = []
 
   def build(self, input_shape):
     """Builds the decoder stack."""
@@ -342,7 +342,7 @@ class DecoderStack(tf.keras.layers.Layer):
       feed_forward_network = ffn_layer.FeedForwardNetwork(
           self._hidden_size, self._filter_size, self._relu_dropout)
 
-      self._layers.append([
+      self.layers.append([
           PrePostProcessingWrapper(self_attention_layer, self._layer_postprocess_dropout),
           PrePostProcessingWrapper(enc_dec_attention_layer, self._layer_postprocess_dropout),
           PrePostProcessingWrapper(feed_forward_network, self._layer_postprocess_dropout)
@@ -391,7 +391,7 @@ class DecoderStack(tf.keras.layers.Layer):
       Output of decoder layer stack.
       float32 tensor with shape [batch_size, target_length, hidden_size]
     """
-    for n, layer in enumerate(self._layers):
+    for n, layer in enumerate(self.layers):
       self_attention_layer = layer[0]
       enc_dec_attention_layer = layer[1]
       feed_forward_network = layer[2]
