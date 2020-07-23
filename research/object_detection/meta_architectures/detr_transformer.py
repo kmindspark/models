@@ -286,6 +286,7 @@ class EncoderStack(tf.keras.layers.Layer):
       Output of encoder layer stack.
       float32 tensor with shape [batch_size, input_length, hidden_size]
     """
+    print(self._layers)
     for n, layer in enumerate(self._layers):
       # Run inputs through the sublayers.
       self_attention_layer = layer[0]
