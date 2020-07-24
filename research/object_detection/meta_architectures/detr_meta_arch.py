@@ -67,7 +67,7 @@ class DETRMetaArch(model.DetectionModel):
     print("Initializing model...")
     super(DETRMetaArch, self).__init__(num_classes=num_classes)
     self._image_resizer_fn = image_resizer_fn
-    self.num_queries = 100
+    self.num_queries = 10
     self.hidden_dimension = 256
     self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=is_training)
     self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()

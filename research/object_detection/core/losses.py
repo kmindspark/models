@@ -235,6 +235,7 @@ class WeightedGIOULocalizationLoss(Loss):
     predicted_boxes = prediction_tensor# box_list.BoxList(tf.reshape(prediction_tensor, [-1, 4]))
     target_boxes = target_tensor #box_list.BoxList(tf.reshape(target_tensor, [-1, 4]))
     #loss_function = tfa.losses.GIouLoss()
+    
     per_anchor_iou_loss = tfa.losses.giou_loss(predicted_boxes,target_boxes) 
                           #                               #1.0 - box_list_ops.matched_iou(predicted_boxes,
                           #                               target_boxes)
