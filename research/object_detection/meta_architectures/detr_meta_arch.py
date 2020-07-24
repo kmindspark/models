@@ -117,7 +117,7 @@ class DETRMetaArch(model.DetectionModel):
     print("Actual bboxes")
     print("Actually predicted logits: ", logits)
 
-    fake_logits = np.zeros((1, 100, 91))
+    fake_logits = np.zeros((8, 100, 91))
     fake_logits[:,:,1] = 1
     logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
 
