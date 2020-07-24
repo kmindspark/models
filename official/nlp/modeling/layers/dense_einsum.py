@@ -122,6 +122,7 @@ class DenseEinsum(tf.keras.layers.Layer):
     self._einsum_string = self._build_einsum_string(free_input_dims,
                                                     self._num_summed_dimensions,
                                                     output_dims)
+    print("EINSUM STRING: ", self._einsum_string)
 
     # This is only saved for testing purposes.
     self._kernel_shape = (
