@@ -18,9 +18,7 @@ Model paper: https://arxiv.org/abs/2005.12872
 Transformer model code source: https://github.com/tensorflow/tensor2tensor
 """
 import tensorflow as tf
-from object_detection.meta_architectures import detr_attention as attention_layer
-from official.modeling import tf_utils
-from official.nlp.modeling import layers
+from object_detection.utils import shape_utils
 
 import math
 
@@ -240,7 +238,7 @@ class EncoderStack(tf.keras.layers.Layer):
     """Builds the encoder stack."""
     for _ in range(self._num_hidden_layers):
       # Create sublayers for each layer.
-      self_attention_layer = attention_layer.SelfAttention(
+      self_attention_layer = SelfAttention(
           self._hidden_size, self._num_heads,
           self._attention_dropout)
       feed_forward_network = FeedForwardNetwork(
@@ -328,10 +326,10 @@ class DecoderStack(tf.keras.layers.Layer):
   def build(self, input_shape):
     """Builds the decoder stack."""
     for _ in range(self._num_hidden_layers):
-      self_attention_layer = attention_layer.SelfAttention(
+      self_attention_layer = SelfAttention(
           self._hidden_size, self._num_heads,
           self._attention_dropout)
-      enc_dec_attention_layer = attention_layer.Attention(
+      enc_dec_attention_layer = Attention(
           self._hidden_size, self._num_heads,
           self._attention_dropout)
       feed_forward_network = FeedForwardNetwork(
@@ -489,7 +487,7 @@ class TwoDimensionalPositionEmbedding(tf.keras.layers.Layer):
     Returns:
       A tensor in shape of [length, hidden_size].
     """
-    input_shape = tf_utils.get_shape_list(inputs)
+    input_shape = shape_utils.combined_static_and_dynamic_shape(inputs)
     per_axis_size = int(math.sqrt(input_shape[1]))
     one_d_encoding = self._get_1d_encoding(per_axis_size)
     encoding_x = tf.repeat(one_d_encoding, repeats=per_axis_size, axis=0)
