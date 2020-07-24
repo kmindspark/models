@@ -114,7 +114,7 @@ class DETRMetaArch(model.DetectionModel):
     x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)], training=self.is_training)
     bboxes_encoded, logits = self._box_ffn(x), self.cls(x)
 
-    fake_logits = np.zeros((1, 10, 91))
+    fake_logits = np.zeros((1, 100, 91))
     fake_logits[:,:,1] = 1
     logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
 
