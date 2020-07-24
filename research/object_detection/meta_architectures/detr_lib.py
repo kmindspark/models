@@ -222,8 +222,8 @@ class EncoderStack(tf.keras.layers.Layer):
     2. Feedforward network (which is 2 fully-connected layers)
   """
 
-  def __init__(self, hidden_size=256, num_heads=8, attention_dropout=0.1,
-               layer_postprocess_dropout=0.1, relu_dropout=0.1, filter_size=256,
+  def __init__(self, hidden_size=256, num_heads=8, attention_dropout=0.0,
+               layer_postprocess_dropout=0.0, relu_dropout=0.0, filter_size=256,
                num_hidden_layers=6, dtype=tf.float32):
     super(EncoderStack, self).__init__()
     self._hidden_size = hidden_size
