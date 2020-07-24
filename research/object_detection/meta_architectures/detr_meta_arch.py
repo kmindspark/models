@@ -443,7 +443,7 @@ class DETRMetaArch(model.DetectionModel):
                                       second_stage_loc_loss,
                                       name='localization_loss')
 
-      classification_loss = tf.multiply(0, #self._second_stage_cls_loss_weight,
+      classification_loss = tf.multiply(0.0, #self._second_stage_cls_loss_weight,
                                         second_stage_cls_loss,
                                         name='classification_loss')
 
