@@ -547,7 +547,6 @@ class Attention(tf.keras.layers.Layer):
     self.output_dense_layer = tf.keras.layers.experimental.EinsumDense(
         equation="abcd,cde->abe",
         output_shape=self.hidden_size,
-        num_summed_dimensions=2,
         kernel_initializer=output_initializer,
         name="output_transform")
     super(Attention, self).build(input_shape)
