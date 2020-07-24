@@ -68,8 +68,8 @@ class DETRMetaArch(model.DetectionModel):
     super(DETRMetaArch, self).__init__(num_classes=num_classes)
     self._image_resizer_fn = image_resizer_fn
     self.num_queries = 10
-    self.hidden_dimension = 256
-    self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=is_training)
+    self.hidden_dimension = 128
+    self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=False)#is_training)
     self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()
     #for layer in self.first_stage.layers:
     #  layer.trainable = False
@@ -89,7 +89,7 @@ class DETRMetaArch(model.DetectionModel):
     self._second_stage_cls_loss_weight = second_stage_classification_loss_weight
     self._box_coder = self.target_assigner.get_box_coder()
     self._parallel_iterations = parallel_iterations
-    self._post_filter = tf.keras.layers.Conv2D(256, 1)
+    self._post_filter = tf.keras.layers.Conv2D(128, 1)
     self._second_stage_nms_fn = second_stage_non_max_suppression_fn
     self._box_ffn = tf.keras.Sequential(layers=[tf.keras.layers.Dense(self.hidden_dimension, activation="relu"),
                                                 tf.keras.layers.Dense(4, activation="sigmoid")])
@@ -111,7 +111,7 @@ class DETRMetaArch(model.DetectionModel):
       x = self.first_stage(preprocessed_inputs, training=self.is_training)
     x = self._post_filter(x)
     x = tf.reshape(x, [x.shape[0], x.shape[1] * x.shape[2], x.shape[3]])
-    x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)], training=self.is_training)
+    x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)], training=False)#self.is_training)
     bboxes_encoded, logits = self._box_ffn(x), self.cls(x)
 
     print("Actual bboxes", bboxes_encoded)
@@ -119,7 +119,7 @@ class DETRMetaArch(model.DetectionModel):
     print("Queries", self.queries)
 
     fake_logits = np.zeros((x.shape[0], 10, 91))
-    fake_logits[:,:,1] = 100
+    fake_logits[:,:,1] = 10
     logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
 
     print("Predicted logits")
@@ -515,7 +515,7 @@ class DETRMetaArch(model.DetectionModel):
         rpn_features_to_crop is not in the prediction_dict.
     """
     with tf.name_scope('SecondStagePostprocessor'):
-      detections_dict = self._postprocess_box_classifier_new(
+      detections_dict = self._postprocess_box_classifier(
           prediction_dict['refined_box_encodings'],
           prediction_dict['class_predictions_with_background'],
           prediction_dict['proposal_boxes'],
