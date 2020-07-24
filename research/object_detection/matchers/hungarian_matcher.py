@@ -43,6 +43,7 @@ class HungarianBipartiteMatcher(matcher.Matcher):
         meaning that column i is not matched and otherwise that it is matched to
         row match_results[i].
     """
+    """
     valid_row_sim_matrix = tf.gather(similarity_matrix,
                                      tf.squeeze(tf.where(valid_rows), axis=-1))
     distance_matrix = -1 * valid_row_sim_matrix
@@ -61,3 +62,21 @@ class HungarianBipartiteMatcher(matcher.Matcher):
                         numpy_wrapper)([distance_matrix])
     
     return tf.reshape(matching_result, [-1])
+    """
+    valid_row_sim_matrix = tf.gather(similarity_matrix,
+                                     tf.squeeze(tf.where(valid_rows), axis=-1))
+    distance_matrix = -1 * valid_row_sim_matrix
+    num_valid_rows = tf.reduce_sum(tf.cast(valid_rows, dtype=tf.float32))
+    numpy_distance = distance_matrix.numpy()
+    #print(numpy_distance)
+    row_indices, col_indices = linear_sum_assignment(numpy_distance)
+    match_results = np.full(numpy_distance.shape[1], -1)
+    
+    for i in range(len(col_indices)):
+        match_results[col_indices[i]] = row_indices[i] 
+
+    match_results = tf.convert_to_tensor(match_results)
+    match_results = tf.reshape(match_results, [-1])
+    match_results = tf.cast(match_results, tf.int32)
+
+    return match_results
