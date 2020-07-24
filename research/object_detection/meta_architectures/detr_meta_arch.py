@@ -114,7 +114,10 @@ class DETRMetaArch(model.DetectionModel):
     x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)], training=self.is_training)
     bboxes_encoded, logits = self._box_ffn(x), self.cls(x)
 
-    fake_logits = np.zeros((1, 100, 91))
+    print("Actual bboxes")
+    print("Actually predicted logits: ", logits)
+
+    fake_logits = np.zeros((x.shape[0], 100, 91))
     fake_logits[:,:,1] = 1
     logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
 
@@ -440,7 +443,7 @@ class DETRMetaArch(model.DetectionModel):
                                       second_stage_loc_loss,
                                       name='localization_loss')
 
-      classification_loss = tf.multiply(self._second_stage_cls_loss_weight,
+      classification_loss = tf.multiply(0, #self._second_stage_cls_loss_weight,
                                         second_stage_cls_loss,
                                         name='classification_loss')
 
@@ -511,7 +514,7 @@ class DETRMetaArch(model.DetectionModel):
         rpn_features_to_crop is not in the prediction_dict.
     """
     with tf.name_scope('SecondStagePostprocessor'):
-      detections_dict = self._postprocess_box_classifier_new(
+      detections_dict = self._postprocess_box_classifier(
           prediction_dict['refined_box_encodings'],
           prediction_dict['class_predictions_with_background'],
           prediction_dict['proposal_boxes'],
