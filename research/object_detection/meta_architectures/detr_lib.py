@@ -529,24 +529,28 @@ class Attention(tf.keras.layers.Layer):
 
     attention_initializer = _glorot_initializer(input_shape.as_list()[-1],
                                                 self.hidden_size)
-    self.query_dense_layer = layers.DenseEinsum(
+    self.query_dense_layer = tf.keras.layers.experimental.EinsumDense(
+        equation="abc,cde->abde",
         output_shape=(self.num_heads, size_per_head),
         kernel_initializer=attention_initializer,
         use_bias=False,
         name="query")
-    self.key_dense_layer = layers.DenseEinsum(
+    self.key_dense_layer = tf.keras.layers.experimental.EinsumDense(
+        equation="abc,cde->abde",
         output_shape=(self.num_heads, size_per_head),
         kernel_initializer=attention_initializer,
         use_bias=False,
         name="key")
-    self.value_dense_layer = layers.DenseEinsum(
+    self.value_dense_layer = tf.keras.layers.experimental.EinsumDense(
+        equation="abc,cde->abde",
         output_shape=(self.num_heads, size_per_head),
         kernel_initializer=attention_initializer,
         use_bias=False,
         name="value")
 
     output_initializer = _glorot_initializer(self.hidden_size, self.hidden_size)
-    self.output_dense_layer = layers.DenseEinsum(
+    self.output_dense_layer = tf.keras.layers.experimental.EinsumDense(
+        equation="abcd,cde->abe",
         output_shape=self.hidden_size,
         num_summed_dimensions=2,
         kernel_initializer=output_initializer,
