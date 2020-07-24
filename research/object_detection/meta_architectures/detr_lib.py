@@ -19,6 +19,7 @@ Transformer model code source: https://github.com/tensorflow/tensor2tensor
 """
 import tensorflow as tf
 from object_detection.utils import shape_utils
+from official.nlp.modeling import layers
 
 import math
 
@@ -527,27 +528,32 @@ class Attention(tf.keras.layers.Layer):
 
     attention_initializer = _glorot_initializer(input_shape.as_list()[-1],
                                                 self.hidden_size)
-    self.query_dense_layer = tf.keras.layers.experimental.EinsumDense(
-        equation="abc,cde->abde",
+    self.query_dense_layer = layers.DenseEinsum(#tf.keras.layers.experimental.EinsumDense(
+        #equation="abc,cde->abde",
         output_shape=(self.num_heads, size_per_head),
         kernel_initializer=attention_initializer,
+        use_bias=False,
         name="query")
-    self.key_dense_layer = tf.keras.layers.experimental.EinsumDense(
-        equation="abc,cde->abde",
+    self.key_dense_layer = layers.DenseEinsum(#tf.keras.layers.experimental.EinsumDense(
+        #equation="abc,cde->abde",
         output_shape=(self.num_heads, size_per_head),
         kernel_initializer=attention_initializer,
+        use_bias=False,
         name="key")
-    self.value_dense_layer = tf.keras.layers.experimental.EinsumDense(
-        equation="abc,cde->abde",
+    self.value_dense_layer = layers.DenseEinsum(#tf.keras.layers.experimental.EinsumDense(
+        #equation="abc,cde->abde",
         output_shape=(self.num_heads, size_per_head),
         kernel_initializer=attention_initializer,
+        use_bias=False,
         name="value")
 
     output_initializer = _glorot_initializer(self.hidden_size, self.hidden_size)
-    self.output_dense_layer = tf.keras.layers.experimental.EinsumDense(
-        equation="abcd,cde->abe",
+    self.output_dense_layer = layers.DenseEinsum(#tf.keras.layers.experimental.EinsumDense(
+        #equation="abcd,cde->abe",
         output_shape=self.hidden_size,
+        num_summed_dimensions=2,
         kernel_initializer=output_initializer,
+        use_bias=False,
         name="output_transform")
     super(Attention, self).build(input_shape)
 
@@ -584,11 +590,11 @@ class Attention(tf.keras.layers.Layer):
     # Linearly project the query, key and value using different learned
     # projections. Splitting heads is automatically done during the linear
     # projections --> [batch_size, length, num_heads, dim_per_head].
-    #print("QUERY")
+    print("QUERY")
     query = self.query_dense_layer(query_input)
-    #print("KEY")
+    print("KEY")
     key = self.key_dense_layer(key_input)
-    #print("VALUE")
+    print("VALUE")
     value = self.value_dense_layer(value_input)
 
     if cache is not None:
