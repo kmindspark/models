@@ -113,7 +113,7 @@ class DETRMetaArch(model.DetectionModel):
       x = self.first_stage(preprocessed_inputs, training=self.is_training2)
     x = self._post_filter(x)
     x = tf.reshape(x, [x.shape[0], x.shape[1] * x.shape[2], x.shape[3]])
-    x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)], training=self.is_training2)
+    x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)], training=True)
     bboxes_encoded, logits = self._box_ffn(x), self.cls(x)
 
     print("Actual bboxes", bboxes_encoded)
