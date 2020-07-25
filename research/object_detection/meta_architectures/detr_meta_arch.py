@@ -67,10 +67,11 @@ class DETRMetaArch(model.DetectionModel):
                 output_final_box_features=False):
     print("Initializing model...")
     super(DETRMetaArch, self).__init__(num_classes=num_classes)
+    is_training = False
     self._image_resizer_fn = image_resizer_fn
     self.num_queries = 100
     self.hidden_dimension = 256
-    self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=False)
+    self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=is_training)
     self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()
     #for layer in self.first_stage.layers:
     #  layer.trainable = False
@@ -109,10 +110,10 @@ class DETRMetaArch(model.DetectionModel):
   def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
     image_shape = tf.shape(preprocessed_inputs)
     with tf.name_scope("FirstStage"):
-      x = self.first_stage(preprocessed_inputs, training=False)
+      x = self.first_stage(preprocessed_inputs, training=self._is_training)
     x = self._post_filter(x)
     x = tf.reshape(x, [x.shape[0], x.shape[1] * x.shape[2], x.shape[3]])
-    x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)], training=True)
+    x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)], training=self._is_training)
     bboxes_encoded, logits = self._box_ffn(x), self.cls(x)
 
     print("Actual bboxes", bboxes_encoded)
