@@ -67,6 +67,7 @@ class DETRMetaArch(model.DetectionModel):
                 output_final_box_features=False):
     print("Initializing model...")
     super(DETRMetaArch, self).__init__(num_classes=num_classes)
+    is_training = False
     self._image_resizer_fn = image_resizer_fn
     self.num_queries = 100
     self.hidden_dimension = 256
