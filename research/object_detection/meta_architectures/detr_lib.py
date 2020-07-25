@@ -171,7 +171,7 @@ class Transformer(tf.keras.Model):
         #pos_encoding = tf.cast(pos_encoding, self.params["dtype"])
       #  decoder_inputs += pos_encoding
 
-      encoder_inputs = tf.keras.layers.Dropout(self._layer_postprocess_dropout)(encoder_inputs, training=training)
+      decoder_inputs = tf.keras.layers.Dropout(self._layer_postprocess_dropout)(decoder_inputs, training=training)
       #if training:
       #  decoder_inputs = tf.nn.dropout(
       #      decoder_inputs, rate=self._layer_postprocess_dropout)
@@ -704,7 +704,7 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
 
     output = self.filter_dense_layer(x)
     
-    output = tf.keras.layers.Dropout(self._layer_postprocess_dropout)(output, training=training)
+    output = tf.keras.layers.Dropout(self.relu_dropout)(output, training=training)
     #if training:
     #  output = tf.nn.dropout(output, rate=self.relu_dropout)
     output = self.output_dense_layer(output)
