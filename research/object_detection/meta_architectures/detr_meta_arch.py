@@ -94,7 +94,7 @@ class DETRMetaArch(model.DetectionModel):
     self._second_stage_nms_fn = second_stage_non_max_suppression_fn
     self._box_ffn = tf.keras.Sequential(layers=[tf.keras.layers.Dense(self.hidden_dimension, activation="relu"),
                                                 tf.keras.layers.Dense(4, activation="sigmoid")])
-    self.is_training = is_training
+    self.is_training = True #is_training
     self.is_training2 = False
     self._second_stage_score_conversion_fn = second_stage_score_conversion_fn
     print("CONSTRUCTOR TRAINING", self.is_training)
@@ -110,10 +110,10 @@ class DETRMetaArch(model.DetectionModel):
   def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
     image_shape = tf.shape(preprocessed_inputs)
     with tf.name_scope("FirstStage"):
-      x = self.first_stage(preprocessed_inputs, training=self.is_training2)
+      x = self.first_stage(preprocessed_inputs, training=False)
     x = self._post_filter(x)
     x = tf.reshape(x, [x.shape[0], x.shape[1] * x.shape[2], x.shape[3]])
-    x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)], training=self.is_training2)
+    x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)], training=False)
     bboxes_encoded, logits = self._box_ffn(x), self.cls(x)
 
     print("Actual bboxes", bboxes_encoded)
