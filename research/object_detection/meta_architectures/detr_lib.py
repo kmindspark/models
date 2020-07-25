@@ -140,7 +140,7 @@ class Transformer(tf.keras.Model):
       #encoder_inputs = tf.keras.layers.Dropout(self._layer_postprocess_dropout)(encoder_inputs, training=training)
       if training:
         encoder_inputs = tf.nn.dropout(
-      #      encoder_inputs, rate=self._layer_postprocess_dropout)
+            encoder_inputs, rate=self._layer_postprocess_dropout)
 
       return self._encoder_stack(
           encoder_inputs, training=training, encoding=pos_encoding), pos_encoding
