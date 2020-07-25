@@ -18,7 +18,7 @@ from object_detection.models import faster_rcnn_resnet_keras_feature_extractor
 from object_detection.core import losses
 from object_detection.utils import variables_helper
 
-#from object_detection.meta_architectures import detr_lib
+from object_detection.meta_architectures import detr_lib
 from object_detection.meta_architectures import detr_transformer
 from object_detection.matchers import hungarian_matcher
 from object_detection.core import post_processing
@@ -77,7 +77,7 @@ class DETRMetaArch(model.DetectionModel):
     self.target_assigner = target_assigner.create_target_assigner('DETR', 'detection')
     self.transformer_args = {"hidden_size": self.hidden_dimension, "attention_dropout": 0.0, "num_heads": 8, "layer_postprocess_dropout": 0.0, "dtype": tf.float32, 
       "num_hidden_layers": 6, "filter_size": 256, "relu_dropout": 0.0}
-    self.transformer = detr_transformer.Transformer(self.transformer_args) #hidden_size=self.hidden_dimension, filter_size=self.hidden_dimension)
+    self.transformer = detr_lib.Transformer()#self.transformer_args) #hidden_size=self.hidden_dimension, filter_size=self.hidden_dimension)
     #self.ffn = self.feature_extractor.get_box_classifier_feature_extractor_model()
     #self.bboxes = tf.keras.layers.Dense(4)
     self.cls = tf.keras.layers.Dense(num_classes + 1)
