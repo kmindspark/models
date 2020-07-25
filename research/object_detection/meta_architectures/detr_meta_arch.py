@@ -416,7 +416,7 @@ class DETRMetaArch(model.DetectionModel):
       my_loc_loss = tf.reshape(my_loc_loss, shape=[reshaped_refined_box_encodings.shape[0], reshaped_refined_box_encodings.shape[1]])
       #print(second_stage_loc_losses.shape)
       #print(my_loc_loss.shape)
-      #second_stage_loc_losses += 2 * my_loc_loss/normalizer
+      second_stage_loc_losses += 2 * my_loc_loss/normalizer
       #print(my_loc_loss * 5/normalizer)
 
       #print("CLASSLOSS: ", class_predictions_with_background, batch_cls_targets_with_background)
@@ -445,7 +445,7 @@ class DETRMetaArch(model.DetectionModel):
                                       second_stage_loc_loss,
                                       name='localization_loss')
 
-      classification_loss = tf.multiply(0.0, #self._second_stage_cls_loss_weight,
+      classification_loss = tf.multiply(self._second_stage_cls_loss_weight,
                                         second_stage_cls_loss,
                                         name='classification_loss')
 
