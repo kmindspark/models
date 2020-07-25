@@ -43,7 +43,7 @@ class HungarianBipartiteMatcher(matcher.Matcher):
         meaning that column i is not matched and otherwise that it is matched to
         row match_results[i].
     """
-    """
+    
     valid_row_sim_matrix = tf.gather(similarity_matrix,
                                      tf.squeeze(tf.where(valid_rows), axis=-1))
     distance_matrix = -1 * valid_row_sim_matrix
@@ -80,3 +80,4 @@ class HungarianBipartiteMatcher(matcher.Matcher):
     match_results = tf.cast(match_results, tf.int32)
 
     return match_results
+    """
