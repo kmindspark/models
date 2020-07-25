@@ -933,7 +933,7 @@ def eval_continuously(
     tf.compat.v2.keras.mixed_precision.experimental.set_policy('mixed_bfloat16')
 
   detection_model = model_builder.build(
-      model_config=model_config, is_training=True)
+      model_config=model_config, is_training=False)
 
   # Create the inputs.
   eval_inputs = []
