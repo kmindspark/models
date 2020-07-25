@@ -90,7 +90,7 @@ class DETRMetaArch(model.DetectionModel):
     self._second_stage_cls_loss_weight = second_stage_classification_loss_weight
     self._box_coder = self.target_assigner.get_box_coder()
     self._parallel_iterations = parallel_iterations
-    self._post_filter = tf.keras.layers.Conv2D(128, 1)
+    self._post_filter = tf.keras.layers.Conv2D(self.hidden_dimension, 1)
     self._second_stage_nms_fn = second_stage_non_max_suppression_fn
     self._box_ffn = tf.keras.Sequential(layers=[tf.keras.layers.Dense(self.hidden_dimension, activation="relu"),
                                                 tf.keras.layers.Dense(4, activation="sigmoid")])
@@ -119,7 +119,7 @@ class DETRMetaArch(model.DetectionModel):
     print("Actually predicted logits: ", logits)
     print("Queries", self.queries)
 
-    fake_logits = np.zeros((x.shape[0], 10, 91))
+    fake_logits = np.zeros((x.shape[0], 100, 91))
     fake_logits[:,:,1] = 10
     logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
 
