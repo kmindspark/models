@@ -136,9 +136,10 @@ class Transformer(tf.keras.Model):
         pos_encoding = self._position_embedding(inputs=encoder_inputs)
         pos_encoding = tf.cast(pos_encoding, self._dtype)
 
-      if training:
-        encoder_inputs = tf.nn.dropout(
-            encoder_inputs, rate=self._layer_postprocess_dropout)
+      encoder_inputs = tf.keras.layers.Dropout(self._layer_postprocess_dropout, training=training)(encoder_inputs)
+      #if training:
+      #  encoder_inputs = tf.nn.dropout(
+      #      encoder_inputs, rate=self._layer_postprocess_dropout)
 
       return self._encoder_stack(
           encoder_inputs, training=training, encoding=pos_encoding), pos_encoding
@@ -169,9 +170,11 @@ class Transformer(tf.keras.Model):
         #pos_encoding = self.position_embedding(decoder_inputs)
         #pos_encoding = tf.cast(pos_encoding, self.params["dtype"])
       #  decoder_inputs += pos_encoding
-      if training:
-        decoder_inputs = tf.nn.dropout(
-            decoder_inputs, rate=self._layer_postprocess_dropout)
+
+      encoder_inputs = tf.keras.layers.Dropout(self._layer_postprocess_dropout, training=training)(encoder_inputs)
+      #if training:
+      #  decoder_inputs = tf.nn.dropout(
+      #      decoder_inputs, rate=self._layer_postprocess_dropout)
 
       # Run values
       outputs = self._decoder_stack(
@@ -209,8 +212,9 @@ class PrePostProcessingWrapper(tf.keras.layers.Layer):
     y = self.layer(*args, **kwargs)
 
     # Postprocessing: apply dropout and residual connection
-    if training:
-      y = tf.nn.dropout(y, rate=self._postprocess_dropout)
+    y = tf.keras.layers.Dropout(self_postprocess_dropout, training=training)(y)
+    #if training:
+    #  y = tf.nn.dropout(y, rate=self._postprocess_dropout)
     return self.layer_norm(x + y)
 
 class EncoderStack(tf.keras.layers.Layer):
@@ -629,8 +633,10 @@ class Attention(tf.keras.layers.Layer):
     # for numeric stability. When training with float16, we keep the input
     # and output in float16 for better performance.
     weights = tf.nn.softmax(logits, name="attention_weights")
-    if training:
-      weights = tf.nn.dropout(weights, rate=self.attention_dropout)
+
+    weights = tf.keras.layers.Dropout(self.attention_dropout, training=training)(weights)
+    #if training:
+    #  weights = tf.nn.dropout(weights, rate=self.attention_dropout)
     attention_output = tf.einsum("BNFT,BTNH->BFNH", weights, value)
 
     # Run the outputs through another linear projection layer. Recombining heads
@@ -697,8 +703,10 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
     length = tf.shape(x)[1]
 
     output = self.filter_dense_layer(x)
-    if training:
-      output = tf.nn.dropout(output, rate=self.relu_dropout)
+    
+    output = tf.keras.layers.Dropout(self._layer_postprocess_dropout, training=training)(output)
+    #if training:
+    #  output = tf.nn.dropout(output, rate=self.relu_dropout)
     output = self.output_dense_layer(output)
 
     return output
