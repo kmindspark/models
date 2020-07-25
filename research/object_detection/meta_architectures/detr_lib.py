@@ -137,7 +137,7 @@ class Transformer(tf.keras.Model):
         pos_encoding = self._position_embedding(inputs=encoder_inputs)
         pos_encoding = tf.cast(pos_encoding, self._dtype)
 
-      encoder_inputs = tf.keras.layers.Dropout(self._layer_postprocess_dropout)(encoder_inputs, training=training)
+      #encoder_inputs = tf.keras.layers.Dropout(self._layer_postprocess_dropout)(encoder_inputs, training=training)
       #if training:
       #  encoder_inputs = tf.nn.dropout(
       #      encoder_inputs, rate=self._layer_postprocess_dropout)
@@ -172,7 +172,7 @@ class Transformer(tf.keras.Model):
         #pos_encoding = tf.cast(pos_encoding, self.params["dtype"])
       #  decoder_inputs += pos_encoding
 
-      decoder_inputs = tf.keras.layers.Dropout(self._layer_postprocess_dropout)(decoder_inputs, training=training)
+      #decoder_inputs = tf.keras.layers.Dropout(self._layer_postprocess_dropout)(decoder_inputs, training=training)
       #if training:
       #  decoder_inputs = tf.nn.dropout(
       #      decoder_inputs, rate=self._layer_postprocess_dropout)
@@ -213,7 +213,7 @@ class PrePostProcessingWrapper(tf.keras.layers.Layer):
     y = self.layer(*args, **kwargs)
 
     # Postprocessing: apply dropout and residual connection
-    y = tf.keras.layers.Dropout(self._postprocess_dropout)(y, training=training)
+    #y = tf.keras.layers.Dropout(self._postprocess_dropout)(y, training=training)
     #if training:
     #  y = tf.nn.dropout(y, rate=self._postprocess_dropout)
     return self.layer_norm(x + y)
@@ -635,7 +635,7 @@ class Attention(tf.keras.layers.Layer):
     # and output in float16 for better performance.
     weights = tf.nn.softmax(logits, name="attention_weights")
 
-    weights = tf.keras.layers.Dropout(self.attention_dropout)(weights, training=training)
+    #weights = tf.keras.layers.Dropout(self.attention_dropout)(weights, training=training)
     #if training:
     #  weights = tf.nn.dropout(weights, rate=self.attention_dropout)
     attention_output = tf.einsum("BNFT,BTNH->BFNH", weights, value)
@@ -705,7 +705,7 @@ class FeedForwardNetwork(tf.keras.layers.Layer):
 
     output = self.filter_dense_layer(x)
     
-    output = tf.keras.layers.Dropout(self.relu_dropout)(output, training=training)
+    #output = tf.keras.layers.Dropout(self.relu_dropout)(output, training=training)
     #if training:
     #  output = tf.nn.dropout(output, rate=self.relu_dropout)
     output = self.output_dense_layer(output)
