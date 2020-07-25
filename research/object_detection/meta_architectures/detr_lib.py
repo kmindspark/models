@@ -105,7 +105,6 @@ class Transformer(tf.keras.Model):
     Raises:
       NotImplementedError: If try to use padded decode method on CPU/GPUs.
     """
-    training = True
     inputs, targets = inputs[0], inputs[1]
 
     # Variance scaling is used here because it seems to work in many problems.
