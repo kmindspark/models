@@ -36,8 +36,8 @@ class Transformer(tf.keras.Model):
   probabilities for the output sequence.
   """
 
-  def __init__(self, hidden_size=256, num_heads=8, attention_dropout=0.1,
-               layer_postprocess_dropout=0.1, relu_dropout=0.1, filter_size=256,
+  def __init__(self, hidden_size=256, num_heads=8, attention_dropout=0.001,
+               layer_postprocess_dropout=0.001, relu_dropout=0.001, filter_size=256,
                num_hidden_layers=6, dtype=tf.float32, name="ODTransformer"):
     """Initialize layers to build Transformer model.
 
