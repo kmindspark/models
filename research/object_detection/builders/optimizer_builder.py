@@ -18,6 +18,7 @@
 import tensorflow.compat.v1 as tf
 
 from object_detection.utils import learning_schedules
+from official.nlp.optimization import AdamWeightDecay
 
 try:
   from tensorflow.contrib import opt as tf_opt  # pylint: disable=g-import-not-at-top
@@ -68,7 +69,7 @@ def build_optimizers_tf_v1(optimizer_config, global_step=None):
     learning_rate = _create_learning_rate(config.learning_rate,
                                           global_step=global_step)
     summary_vars.append(learning_rate)
-    optimizer = tf.train.AdamOptimizer(learning_rate, epsilon=config.epsilon)
+    optimizer = AdamWeightDecay(learning_rate, weight_decay_rate=0.0001, epsilon=config.epsilon)
 
 
   if optimizer is None:
