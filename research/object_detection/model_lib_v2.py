@@ -265,10 +265,10 @@ def eager_train_step(detection_model,
   #for i in range(len(trainable_variables)):
   #  new_list.append(trainable_variables[i].name)
   #print("VARNAMES", new_list)
-  #for i in range(len(trainable_variables)):
-  #  if not (trainable_variables[i].name.startswith("conv2d") or trainable_variables[i].name.startswith("transformer")):
-  #    print("Reducing gradient")
-  #    gradients[i] /= 10
+  for i in range(len(trainable_variables)):
+    if not (trainable_variables[i].name.startswith("conv2d") or trainable_variables[i].name.startswith("transformer")):
+      print("Reducing gradient")
+      gradients[i] /= 10
 
   if clip_gradients_value:
     gradients, _ = tf.clip_by_global_norm(gradients, clip_gradients_value)
