@@ -70,7 +70,7 @@ class DETRMetaArch(model.DetectionModel):
     self._image_resizer_fn = image_resizer_fn
     self.num_queries = 100
     self.hidden_dimension = 256
-    self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=is_training)
+    self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=is_training, weight_decay=0.0001)
     self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()
     #for layer in self.first_stage.layers:
     #  layer.trainable = False
@@ -469,7 +469,9 @@ class DETRMetaArch(model.DetectionModel):
     raise NotImplementedError("This function should only be called in TF 1.x")
 
   def regularization_losses(self):
-    return 0
+    all_losses = []
+    if self.first_stage:
+      all_losses.extend(self.first_stage.losses)
 
   def postprocess(self, prediction_dict, true_image_shapes):
     """Convert prediction tensors to final detections.
