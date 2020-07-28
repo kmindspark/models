@@ -261,13 +261,13 @@ def eager_train_step(detection_model,
   gradients = tape.gradient(total_loss, trainable_variables)
 
   #print("TYPE: ", type(trainable_variables))
-  #new_list = []
-  #for i in range(len(trainable_variables)):
-  #  new_list.append(trainable_variables[i].name)
-  #print("VARNAMES", new_list)
+  new_list = []
+  for i in range(len(trainable_variables)):
+    new_list.append(trainable_variables[i].name)
+  print("VARNAMES", new_list)
   for i in range(len(trainable_variables)):
     if not (trainable_variables[i].name.startswith("conv2d") or trainable_variables[i].name.startswith("transformer")):
-      print("Reducing gradient")
+      #print("Reducing gradient")
       gradients[i] /= 10
 
   if clip_gradients_value:
@@ -606,7 +606,7 @@ def train_loop(
           return strategy.reduce(tf.distribute.ReduceOp.SUM,
                                  per_replica_losses, axis=None)
 
-        @tf.function
+        #@tf.function
         def _dist_train_step(data_iterator):
           """A distributed train step."""
 
