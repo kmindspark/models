@@ -77,7 +77,7 @@ class DETRMetaArch(model.DetectionModel):
     self.target_assigner = target_assigner.create_target_assigner('DETR', 'detection')
     self.transformer_args = {"hidden_size": self.hidden_dimension, "attention_dropout": 0.0, "num_heads": 8, "layer_postprocess_dropout": 0.0, "dtype": tf.float32, 
       "num_hidden_layers": 3, "filter_size": 256, "relu_dropout": 0.0}
-    self.transformer = detr_lib.Transformer(num_hidden_layers=6)#self.transformer_args) #hidden_size=self.hidden_dimension, filter_size=self.hidden_dimension)
+    self.transformer = detr_lib.Transformer(num_hidden_layers=3)#self.transformer_args) #hidden_size=self.hidden_dimension, filter_size=self.hidden_dimension)
     #self.ffn = self.feature_extractor.get_box_classifier_feature_extractor_model()
     #self.bboxes = tf.keras.layers.Dense(4)
     self.cls = tf.keras.layers.Dense(num_classes + 1)
@@ -422,7 +422,7 @@ class DETRMetaArch(model.DetectionModel):
       #print("CLASSLOSS: ", class_predictions_with_background, batch_cls_targets_with_background)
 
       print("SHAPE", batch_cls_weights.shape)
-      batch_cls_weights = tf.concat([tf.expand_dims(batch_cls_weights[:, :, 0] / 10, axis=2), batch_cls_weights[:, :, 1:]], axis=-1)
+      batch_cls_weights = tf.concat([tf.expand_dims(batch_cls_weights[:, :, 0] / 100, axis=2), batch_cls_weights[:, :, 1:]], axis=-1)
 
       second_stage_cls_losses = ops.reduce_sum_trailing_dimensions(
           self._classification_loss(
