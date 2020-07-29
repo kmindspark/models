@@ -95,6 +95,7 @@ class IouAndClassSimilarity(RegionSimilarityCalculator):
     Returns:
       A tensor with shape [N, M] representing pairwise iou scores.
     """
+    groundtruth_labels = tf.concat([tf.expand_dims(groundtruth_labels[:, 0] / 2, axis=1), groundtruth_labels[:, 1:]], axis=-1)
     classification_scores = tf.matmul(groundtruth_labels,
         tf.nn.softmax(predicted_labels), transpose_b=True)
     return -5 * box_list_ops.l1(boxlist1, boxlist2) + \
