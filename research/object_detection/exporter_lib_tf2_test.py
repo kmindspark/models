@@ -56,6 +56,7 @@ class FakeModel(model.DetectionModel):
 
   def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
     return_dict = {'image': self._conv(preprocessed_inputs)}
+    print("SIDE INPUTS: ", side_inputs)
     if 'side_inp' in side_inputs:
       return_dict['image'] += side_inputs['side_inp']
     return return_dict
@@ -221,15 +222,16 @@ class ExportInferenceGraphTest(tf.test.TestCase, parameterized.TestCase):
           trained_checkpoint_dir=tmp_dir,
           output_directory=output_directory,
           use_side_inputs=True,
-          side_input_shapes="2,3",
+          side_input_shapes="1",
           side_input_names="side_inp",
           side_input_types="tf.float32")
 
       saved_model_path = os.path.join(output_directory, 'saved_model')
-      detect_fn = tf.saved_model.load(saved_model_path)
-      image = self.get_dummy_input(input_type)
-      side_input = tf.ones([2, 3], dtype=tf.float32)
-      detections = detect_fn(input_tensor=image, side_inp=side_input)
+      detect_fn = tf.saved_model.load(saved_model_path).signatures['serving_default']
+      image = tf.constant(self.get_dummy_input(input_type))
+      side_input = np.ones((1,), dtype=np.float32)
+      detections_one = tf.saved_model.load(saved_model_path)(image, side_input)
+      detections = detect_fn(input_tensor=image, side_inp=tf.constant(side_input))
 
       detection_fields = fields.DetectionResultFields
       self.assertAllClose(detections[detection_fields.detection_boxes],
