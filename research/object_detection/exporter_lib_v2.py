@@ -196,6 +196,8 @@ def export_inference_graph(input_type,
 
   if input_type not in DETECTION_MODULE_MAP:
     raise ValueError('Unrecognized `input_type`')
+  if use_side_inputs and input_type != 'image_tensor':
+    raise ValueError('Side inputs supported for image_tensor input type only.')
   detection_module = DETECTION_MODULE_MAP[input_type](detection_model,
                                                       use_side_inputs,
                                                       side_input_shapes,
