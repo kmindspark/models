@@ -119,9 +119,9 @@ class DETRMetaArch(model.DetectionModel):
     print("Actually predicted logits: ", logits)
     print("Queries", self.queries)
 
-    fake_logits = np.zeros((x.shape[0], 100, self.num_classes + 1))
-    fake_logits[:,:,1] = 100
-    logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
+    #fake_logits = np.zeros((x.shape[0], 100, self.num_classes + 1))
+    #fake_logits[:,:,1] = 100
+    #logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
 
     print("Predicted logits")
     #print(bboxes_encoded)
