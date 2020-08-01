@@ -49,6 +49,7 @@ class FakeModel(model.DetectionModel):
         filters=1, kernel_size=1, strides=(1, 1), padding='valid',
         kernel_initializer=tf.keras.initializers.Constant(
             value=conv_weight_scalar))
+    self._conv(tf.ones([1, 10, 10, 3]))
 
   def preprocess(self, inputs):
     true_image_shapes = []  # Doesn't matter for the fake model.
