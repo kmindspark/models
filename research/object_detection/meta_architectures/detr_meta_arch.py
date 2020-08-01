@@ -115,13 +115,13 @@ class DETRMetaArch(model.DetectionModel):
     x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0), x.shape[0], axis=0)], training=self.is_training)
     bboxes_encoded, logits = self._box_ffn(x), self.cls(x)
 
-    #print("Actual bboxes", bboxes_encoded)
-    #print("Actually predicted logits: ", logits)
-    #print("Queries", self.queries)
+    print("Actual bboxes", bboxes_encoded)
+    print("Actually predicted logits: ", logits)
+    print("Queries", self.queries)
 
-    fake_logits = np.zeros((x.shape[0], 100, self.num_classes + 1))
-    fake_logits[:,:,1] = 1000
-    logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
+    #fake_logits = np.zeros((x.shape[0], 100, self.num_classes + 1))
+    #fake_logits[:,:,1] = 1000
+    #logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
 
     print("Predicted logits")
     #print(bboxes_encoded)
