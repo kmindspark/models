@@ -70,7 +70,7 @@ class DETRMetaArch(model.DetectionModel):
     self._image_resizer_fn = image_resizer_fn
     self.num_queries = 100
     self.hidden_dimension = 256
-    self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=False)#, weight_decay=0.0001)
+    self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=is_training)#, weight_decay=0.0001)
     self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()
     #for layer in self.first_stage.layers:
     #  layer.trainable = False
@@ -82,7 +82,7 @@ class DETRMetaArch(model.DetectionModel):
     #self.bboxes = tf.keras.layers.Dense(4)
     self.cls = tf.keras.layers.Dense(num_classes + 1)
     self.cls_activation = tf.keras.layers.Softmax()
-    self.queries = tf.keras.backend.variable(value=tf.random_normal_initializer(stddev=1.0)([self.num_queries, self.hidden_dimension]), name="object_queries", dtype=tf.float32)#tf.keras.backend.variable(tf.zeros([self.num_queries, self.hidden_dimension]), name="object_queries") #tf.zeros([self.num_queries, self.hidden_dimension]), dtype=tf.float32) #tf.random.uniform([self.num_queries, self.hidden_dimension]) tf.Variable(initial_value=tf.zeros((self.num_queries, self.hidden_dimension)), trainable=True)
+    self.queries = tf.keras.backend.variable(value=tf.zeros(stddev=1.0)([self.num_queries, self.hidden_dimension]), name="object_queries", dtype=tf.float32)# tf.random_normal_initializer tf.keras.backend.variable(tf.zeros([self.num_queries, self.hidden_dimension]), name="object_queries") #tf.zeros([self.num_queries, self.hidden_dimension]), dtype=tf.float32) #tf.random.uniform([self.num_queries, self.hidden_dimension]) tf.Variable(initial_value=tf.zeros((self.num_queries, self.hidden_dimension)), trainable=True)
     self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
     self._localization_loss_iou = losses.WeightedGIOULocalizationLoss()
     self._classification_loss = losses.WeightedSoftmaxClassificationLoss()
