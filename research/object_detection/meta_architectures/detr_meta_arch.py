@@ -69,7 +69,7 @@ class DETRMetaArch(model.DetectionModel):
     super(DETRMetaArch, self).__init__(num_classes=num_classes)
     self._image_resizer_fn = image_resizer_fn
     self.num_queries = 100
-    self.hidden_dimension = 256
+    self.hidden_dimension = 128
     self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=is_training)#, weight_decay=0.0001)
     self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()
     #for layer in self.first_stage.layers:
@@ -77,13 +77,15 @@ class DETRMetaArch(model.DetectionModel):
     self.target_assigner = target_assigner.create_target_assigner('DETR', 'detection')
     self.transformer_args = {"hidden_size": self.hidden_dimension, "attention_dropout": 0.0, "num_heads": 8, "layer_postprocess_dropout": 0.0, "dtype": tf.float32, 
       "num_hidden_layers": 3, "filter_size": 256, "relu_dropout": 0.0}
-    self.transformer = detr_lib.Transformer(attention_dropout=0.01, layer_postprocess_dropout=0.01, relu_dropout=0.01)#self.transformer_args) #hidden_size=self.hidden_dimension, filter_size=self.hidden_dimension)
+    self.transformer = detr_lib.Transformer(attention_dropout=0.0, layer_postprocess_dropout=0.0,
+    relu_dropout=0.0, hidden_size=self.hidden_dimension, filter_size=self.hidden_dimension,
+    num_hidden_layers=3)#self.transformer_args) #hidden_size=self.hidden_dimension, filter_size=self.hidden_dimension)
     #self.ffn = self.feature_extractor.get_box_classifier_feature_extractor_model()
     #self.bboxes = tf.keras.layers.Dense(4)
     self.cls = tf.keras.layers.Dense(num_classes + 1)
     self.cls_activation = tf.keras.layers.Softmax()
     print("INITIALIZING QUERIES")
-    self.queries = tf.keras.backend.variable(value=tf.random_normal_initializer(stddev=1.0)([self.num_queries, self.hidden_dimension]), name="object_queries", dtype=tf.float32)# tf.random_normal_initializer tf.keras.backend.variable(tf.zeros([self.num_queries, self.hidden_dimension]), name="object_queries") #tf.zeros([self.num_queries, self.hidden_dimension]), dtype=tf.float32) #tf.random.uniform([self.num_queries, self.hidden_dimension]) tf.Variable(initial_value=tf.zeros((self.num_queries, self.hidden_dimension)), trainable=True)
+    self.queries = tf.keras.backend.variable(tf.random.uniform([self.num_queries, self.hidden_dimension]))  #tf.keras.backend.variable(value=tf.random_normal_initializer(stddev=1.0)([self.num_queries, self.hidden_dimension]), name="object_queries", dtype=tf.float32)# tf.random_normal_initializer tf.keras.backend.variable(tf.zeros([self.num_queries, self.hidden_dimension]), name="object_queries") #tf.zeros([self.num_queries, self.hidden_dimension]), dtype=tf.float32) #tf.random.uniform([self.num_queries, self.hidden_dimension]) tf.Variable(initial_value=tf.zeros((self.num_queries, self.hidden_dimension)), trainable=True)
     print(self.queries)
     self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
     self._localization_loss_iou = losses.WeightedGIOULocalizationLoss()
@@ -109,8 +111,8 @@ class DETRMetaArch(model.DetectionModel):
 
 
   def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
-    if not self.is_training:
-      self.queries = tf.keras.backend.variable(value=tf.random_normal_initializer(stddev=20.0)([self.num_queries, self.hidden_dimension]), name="object_queries", dtype=tf.float32)
+    #if not self.is_training:
+    #  self.queries = tf.keras.backend.variable(value=tf.random_normal_initializer(stddev=20.0)([self.num_queries, self.hidden_dimension]), name="object_queries", dtype=tf.float32)
 
     image_shape = tf.shape(preprocessed_inputs)
     with tf.name_scope("FirstStage"):
@@ -124,10 +126,10 @@ class DETRMetaArch(model.DetectionModel):
     print("Actually predicted logits: ", logits)
     print("Queries", self.queries)
 
-    if (not self.is_training):
-      fake_logits = np.zeros((x.shape[0], 100, self.num_classes + 1))
-      fake_logits[:,:,1] = 1000
-      logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
+    #if (not self.is_training):
+    #  fake_logits = np.zeros((x.shape[0], 100, self.num_classes + 1))
+    #  fake_logits[:,:,1] = 1000
+    #  logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
 
     reshaped_bboxes = tf.reshape(bboxes_encoded, [bboxes_encoded.shape[0] * bboxes_encoded.shape[1], 1, bboxes_encoded.shape[2]])
     batches_queries = tf.repeat(tf.expand_dims(self.num_queries, 0), x.shape[0], axis=0)
