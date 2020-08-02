@@ -77,7 +77,7 @@ class DETRMetaArch(model.DetectionModel):
     self.target_assigner = target_assigner.create_target_assigner('DETR', 'detection')
     self.transformer_args = {"hidden_size": self.hidden_dimension, "attention_dropout": 0.0, "num_heads": 8, "layer_postprocess_dropout": 0.0, "dtype": tf.float32, 
       "num_hidden_layers": 3, "filter_size": 256, "relu_dropout": 0.0}
-    self.transformer = detr_lib.Transformer()#self.transformer_args) #hidden_size=self.hidden_dimension, filter_size=self.hidden_dimension)
+    self.transformer = detr_lib.Transformer(attention_dropout=0.01, layer_postprocess_dropout=0.01, relu_dropout=0.01)#self.transformer_args) #hidden_size=self.hidden_dimension, filter_size=self.hidden_dimension)
     #self.ffn = self.feature_extractor.get_box_classifier_feature_extractor_model()
     #self.bboxes = tf.keras.layers.Dense(4)
     self.cls = tf.keras.layers.Dense(num_classes + 1)
@@ -126,11 +126,6 @@ class DETRMetaArch(model.DetectionModel):
       fake_logits[:,:,1] = 1000
       logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
 
-    print("Predicted logits")
-    #print(bboxes_encoded)
-    print(logits)
-    #print(self.queries)
-
     reshaped_bboxes = tf.reshape(bboxes_encoded, [bboxes_encoded.shape[0] * bboxes_encoded.shape[1], 1, bboxes_encoded.shape[2]])
     batches_queries = tf.repeat(tf.expand_dims(self.num_queries, 0), x.shape[0], axis=0)
     return {
@@ -164,7 +159,6 @@ class DETRMetaArch(model.DetectionModel):
         Raises:
         ValueError: if inputs tensor does not have type tf.float32
         """
-
         with tf.name_scope('Preprocessor'):
             (resized_inputs,
             true_image_shapes) = shape_utils.resize_images_and_return_shapes(
@@ -236,8 +230,6 @@ class DETRMetaArch(model.DetectionModel):
         'second_stage_classification_loss') to scalar tensors representing
         corresponding loss values.
     """
-    #print("Proposal boxes")
-    #print(prediction_dict['proposal_boxes'])
     with tf.name_scope(scope, 'Loss', prediction_dict.values()):
       (groundtruth_boxlists, groundtruth_classes_with_background_list,
        groundtruth_masks_list, groundtruth_weights_list
@@ -250,7 +242,6 @@ class DETRMetaArch(model.DetectionModel):
             prediction_dict['num_proposals'], groundtruth_boxlists,
             groundtruth_classes_with_background_list,
             groundtruth_weights_list, prediction_dict['image_shape'],
-            prediction_dict.get('mask_predictions'), groundtruth_masks_list,
             prediction_dict.get(
                 fields.DetectionResultFields.detection_boxes),
             prediction_dict.get(
@@ -266,8 +257,6 @@ class DETRMetaArch(model.DetectionModel):
                            groundtruth_classes_with_background_list,
                            groundtruth_weights_list,
                            image_shape,
-                           prediction_masks=None,
-                           groundtruth_masks_list=None,
                            detection_boxes=None,
                            num_detections=None):
     """Computes scalar box classifier loss tensors.
@@ -306,12 +295,6 @@ class DETRMetaArch(model.DetectionModel):
       groundtruth_weights_list: A list of 1-D tf.float32 tensors of shape
         [num_boxes] containing weights for groundtruth boxes.
       image_shape: a 1-D tensor of shape [4] representing the image shape.
-      prediction_masks: an optional 4-D tensor with shape [total_num_proposals,
-        num_classes, mask_height, mask_width] containing the instance masks for
-        each box.
-      groundtruth_masks_list: an optional list of 3-D tensors of shape
-        [num_boxes, image_height, image_width] containing the instance masks for
-        each of the boxes.
       detection_boxes: 3-D float tensor of shape [batch,
         max_total_detections, 4] containing post-processed detection boxes in
         normalized co-ordinates.
@@ -414,17 +397,9 @@ class DETRMetaArch(model.DetectionModel):
           convert_to_minmaxcoords(tf.reshape(batch_reg_targets, [-1, 4])),
           weights=batch_reg_weights,
           losses_mask=losses_mask)
-      #print("LOSS results")
-      #print(second_stage_loc_losses)
       my_loc_loss = tf.reshape(my_loc_loss, shape=[reshaped_refined_box_encodings.shape[0], reshaped_refined_box_encodings.shape[1]])
-      #print(second_stage_loc_losses.shape)
-      #print(my_loc_loss.shape)
       second_stage_loc_losses += 2 * my_loc_loss/normalizer
-      #print(my_loc_loss * 5/normalizer)
 
-      #print("CLASSLOSS: ", class_predictions_with_background, batch_cls_targets_with_background)
-
-      print("SHAPE", batch_cls_weights.shape)
       batch_cls_weights = tf.concat([tf.expand_dims(batch_cls_weights[:, :, 0] / 10, axis=2), batch_cls_weights[:, :, 1:]], axis=-1)
 
       second_stage_cls_losses = ops.reduce_sum_trailing_dimensions(
@@ -442,8 +417,6 @@ class DETRMetaArch(model.DetectionModel):
           second_stage_cls_losses * tf.cast(paddings_indicator,
                                             dtype=tf.float32))
 
-      #print("LOC LOSS", second_stage_loc_loss)
-
       localization_loss = tf.multiply(self._second_stage_loc_loss_weight,
                                       second_stage_loc_loss,
                                       name='localization_loss')
@@ -456,7 +429,6 @@ class DETRMetaArch(model.DetectionModel):
                        localization_loss,
                    'Loss/BoxClassifierLoss/classification_loss':
                        classification_loss}
-      #print(loss_dict)
     return loss_dict
 
   def updates(self):
@@ -472,9 +444,9 @@ class DETRMetaArch(model.DetectionModel):
     raise NotImplementedError("This function should only be called in TF 1.x")
 
   def regularization_losses(self):
-    all_losses = []
-    if self.first_stage:
-      all_losses.extend(self.first_stage.losses)
+    #all_losses = []
+    #if self.first_stage:
+    #  all_losses.extend(self.first_stage.losses)
 
   def postprocess(self, prediction_dict, true_image_shapes):
     """Convert prediction tensors to final detections.
