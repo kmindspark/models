@@ -444,6 +444,7 @@ class DETRMetaArch(model.DetectionModel):
     raise NotImplementedError("This function should only be called in TF 1.x")
 
   def regularization_losses(self):
+    return []
     #all_losses = []
     #if self.first_stage:
     #  all_losses.extend(self.first_stage.losses)
