@@ -109,7 +109,7 @@ class DETRMetaArch(model.DetectionModel):
 
 
   def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
-    if not self.training:
+    if not self.is_training:
       self.queries = tf.keras.backend.variable(value=tf.random_normal_initializer(stddev=20.0)([self.num_queries, self.hidden_dimension]), name="object_queries", dtype=tf.float32)
 
     image_shape = tf.shape(preprocessed_inputs)
