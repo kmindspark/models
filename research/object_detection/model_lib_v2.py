@@ -348,7 +348,7 @@ def load_fine_tune_checkpoint(
 
   features, labels = iter(input_dataset).next()
 
-  #@tf.function
+  @tf.function
   def _dummy_computation_fn(features, labels):
     model._is_training = False  # pylint: disable=protected-access
     tf.keras.backend.set_learning_phase(False)
@@ -606,7 +606,7 @@ def train_loop(
           return strategy.reduce(tf.distribute.ReduceOp.SUM,
                                  per_replica_losses, axis=None)
 
-        #@tf.function
+        @tf.function
         def _dist_train_step(data_iterator):
           """A distributed train step."""
 
