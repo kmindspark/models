@@ -386,16 +386,14 @@ class DecoderStack(tf.keras.layers.Layer):
               decoder_self_attention_bias,
               training=training,
               cache=layer_cache,
-              decode_loop_step=decode_loop_step,
-              use_bias=False)
+              decode_loop_step=decode_loop_step)
         with tf.name_scope("encdec_attention"):
           decoder_inputs = enc_dec_attention_layer(
               decoder_inputs,
               decoder_inputs,
               encoder_outputs,
               attention_bias,
-              training=training,
-              use_bias=False)
+              training=training)
         with tf.name_scope("ffn"):
           decoder_inputs = feed_forward_network(
               decoder_inputs, training=training)
