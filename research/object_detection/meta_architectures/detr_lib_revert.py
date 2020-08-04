@@ -370,6 +370,7 @@ class DecoderStack(tf.keras.layers.Layer):
       Output of decoder layer stack.
       float32 tensor with shape [batch_size, target_length, hidden_size]
     """
+    print("encoder outputs:", encoder_outputs)
     for n, layer in enumerate(self.layers):
       self_attention_layer = layer[0]
       enc_dec_attention_layer = layer[1]
