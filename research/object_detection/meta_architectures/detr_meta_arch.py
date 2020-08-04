@@ -18,7 +18,7 @@ from object_detection.models import faster_rcnn_resnet_keras_feature_extractor
 from object_detection.core import losses
 from object_detection.utils import variables_helper
 
-from object_detection.meta_architectures import detr_lib
+#from object_detection.meta_architectures import detr_lib
 from object_detection.meta_architectures import detr_lib_revert
 from object_detection.meta_architectures import detr_transformer
 from object_detection.matchers import hungarian_matcher
