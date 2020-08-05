@@ -316,7 +316,6 @@ class DecoderStack(tf.keras.layers.Layer):
 
   def build(self, input_shape):
     """Builds the decoder stack."""
-    input_shape = input_shape[0]
     params = self.params
     for _ in range(params["num_hidden_layers"]):
       self_attention_layer = SelfAttention(
@@ -511,6 +510,7 @@ class Attention(tf.keras.layers.Layer):
     self.attention_dropout = attention_dropout
 
   def build(self, input_shape):
+    input_shape = input_shape[0]
     """Builds the layer."""
     # Layers for linearly projecting the queries, keys, and values.
     size_per_head = self.hidden_size // self.num_heads
