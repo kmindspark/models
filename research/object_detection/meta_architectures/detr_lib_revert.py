@@ -221,7 +221,7 @@ class PrePostProcessingWrapper(tf.keras.layers.Layer):
     training = kwargs["training"]
 
     y = self.layer_norm(x)
-    newargs = []
+    newargs = [y]
     if len(args) == 1:
       newargs.append(self.layer_norm(args[0]))
     else:
