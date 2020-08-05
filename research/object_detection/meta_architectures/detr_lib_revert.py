@@ -627,10 +627,10 @@ class Attention(tf.keras.layers.Layer):
 class SelfAttention(Attention):
   """Multiheaded self-attention layer."""
 
-  def call(self, query_input, training, cache=None,
+  def call(self, query_input, value_input, training, cache=None,
            decode_loop_step=None):
     return super(SelfAttention, self).call(
-        query_input, query_input, query_input, training, cache, decode_loop_step)
+        query_input, query_input, value_input, training, cache, decode_loop_step)
 
 
 class FeedForwardNetwork(tf.keras.layers.Layer):
