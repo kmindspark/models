@@ -392,6 +392,7 @@ class DecoderStack(tf.keras.layers.Layer):
           decoder_inputs = enc_dec_attention_layer(
               decoder_inputs,
               encoder_outputs,
+              encoder_outputs,
               training=training)
         with tf.name_scope("ffn"):
           decoder_inputs = feed_forward_network(
@@ -549,7 +550,7 @@ class Attention(tf.keras.layers.Layer):
         "attention_dropout": self.attention_dropout,
     }
 
-  def call(self, query_input, key_input, training, cache=None,
+  def call(self, query_input, key_input, value_input, training, cache=None,
            decode_loop_step=None):
     """Apply attention mechanism to query_input and source_input.
 
@@ -577,7 +578,7 @@ class Attention(tf.keras.layers.Layer):
     # projections --> [batch_size, length, num_heads, dim_per_head].
     query = self.query_dense_layer(query_input)
     key = self.key_dense_layer(key_input)
-    value = self.value_dense_layer(key_input)
+    value = self.value_dense_layer(value_input)
 
     if cache is not None:
       # Combine cached keys and values with new keys and values.
@@ -629,7 +630,7 @@ class SelfAttention(Attention):
   def call(self, query_input, training, cache=None,
            decode_loop_step=None):
     return super(SelfAttention, self).call(
-        query_input, query_input, training, cache, decode_loop_step)
+        query_input, query_input, query_input, training, cache, decode_loop_step)
 
 
 class FeedForwardNetwork(tf.keras.layers.Layer):
