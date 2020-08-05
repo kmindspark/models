@@ -316,6 +316,7 @@ class DecoderStack(tf.keras.layers.Layer):
 
   def build(self, input_shape):
     """Builds the decoder stack."""
+    input_shape = input_shape[0]
     params = self.params
     for _ in range(params["num_hidden_layers"]):
       self_attention_layer = SelfAttention(
