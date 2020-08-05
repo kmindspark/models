@@ -558,7 +558,7 @@ class Attention(tf.keras.layers.Layer):
         "attention_dropout": self.attention_dropout,
     }
 
-  def call(self, query_key_value, training, cache=None,
+  def call(self, query_input, key_input, value_input, training, cache=None,
            decode_loop_step=None):
     """Apply attention mechanism to query_input and source_input.
 
@@ -581,7 +581,6 @@ class Attention(tf.keras.layers.Layer):
     Returns:
       Attention layer output with shape [batch_size, length_query, hidden_size]
     """
-    query_input, key_input, value_input = query_key_value
     # Linearly project the query, key and value using different learned
     # projections. Splitting heads is automatically done during the linear
     # projections --> [batch_size, length, num_heads, dim_per_head].
