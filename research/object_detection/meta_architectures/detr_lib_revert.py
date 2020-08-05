@@ -395,7 +395,7 @@ class DecoderStack(tf.keras.layers.Layer):
               #use_bias=False)
         with tf.name_scope("encdec_attention"):
           decoder_inputs = enc_dec_attention_layer(
-              encoder_outputs,
+              decoder_inputs,
               decoder_inputs,
               encoder_outputs,
               encoder_outputs,
