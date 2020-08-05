@@ -21,6 +21,7 @@ import tensorflow as tf
 from object_detection.utils import shape_utils
 from official.nlp.modeling import layers
 from official.nlp.transformer import model_utils
+from official.nlp.modeling.layers import position_embedding
 
 import math
 
@@ -48,7 +49,7 @@ class Transformer(tf.keras.Model):
     #    params["vocab_size"], params["hidden_size"])
     self.encoder_stack = EncoderStack(params)
     self.decoder_stack = DecoderStack(params)
-    self.position_embedding = TwoDimensionalPositionEmbedding(
+    self.position_embedding = position_embedding.RelativePositionEmbedding(
         hidden_size=self.params["hidden_size"])
 
   def get_config(self):
