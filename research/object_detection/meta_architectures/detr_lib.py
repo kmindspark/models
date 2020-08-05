@@ -20,6 +20,7 @@ Transformer model code source: https://github.com/tensorflow/tensor2tensor
 import tensorflow as tf
 from object_detection.utils import shape_utils
 from official.nlp.modeling import layers
+from official.modeling import tf_utils
 
 import math
 
@@ -464,6 +465,10 @@ class TwoDimensionalPositionEmbedding(tf.keras.layers.Layer):
     return dict(list(base_config.items()) + list(config.items()))
 
   def _get_1d_encoding(self, length):
+    print(length)
+    print(self._hidden_size)
+    print(self._min_timescale)
+    print(self._max_timescale)
     position = tf.cast(tf.range(length), tf.float32)
     num_timescales = self._hidden_size // 2
     min_timescale, max_timescale = self._min_timescale, self._max_timescale
@@ -474,7 +479,7 @@ class TwoDimensionalPositionEmbedding(tf.keras.layers.Layer):
         tf.cast(tf.range(num_timescales), tf.float32) *
         -log_timescale_increment)
     scaled_time = tf.expand_dims(position, 1) * tf.expand_dims(inv_timescales,
-                                                               0)
+                                                                0)
     position_embeddings = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)],
                                     axis=1)
     return position_embeddings
@@ -494,8 +499,10 @@ class TwoDimensionalPositionEmbedding(tf.keras.layers.Layer):
       A tensor in shape of [length, hidden_size].
     """
     input_shape = shape_utils.combined_static_and_dynamic_shape(inputs)
+    print(input_shape)
     per_axis_size = int(math.sqrt(input_shape[1]))
     one_d_encoding = self._get_1d_encoding(per_axis_size)
+    print(one_d_encoding)
     encoding_x = tf.repeat(one_d_encoding, repeats=per_axis_size, axis=0)
     encoding_y = tf.tile(one_d_encoding, multiples=[per_axis_size, 1])
     return tf.concat([encoding_x, encoding_y], axis=1)

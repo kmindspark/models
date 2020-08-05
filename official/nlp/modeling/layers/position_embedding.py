@@ -189,6 +189,10 @@ class RelativePositionEmbedding(tf.keras.layers.Layer):
             "If inputs is not None, `length` must equal to input_shape[1]."
         )
       length = input_shape[1]
+    print(length)
+    print(self._hidden_size)
+    print(self._min_timescale)
+    print(self._max_timescale)
     position = tf.cast(tf.range(length), tf.float32)
     num_timescales = self._hidden_size // 2
     min_timescale, max_timescale = self._min_timescale, self._max_timescale
