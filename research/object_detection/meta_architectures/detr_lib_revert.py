@@ -223,7 +223,7 @@ class PrePostProcessingWrapper(tf.keras.layers.Layer):
     #y = self.layer_norm(x)
     
     # Get layer output
-    y = self.layer(y, *args, **kwargs)
+    y = self.layer(*args, **kwargs)
 
     # Postprocessing: apply dropout and residual connection
     if training:
