@@ -387,7 +387,7 @@ class DecoderStack(tf.keras.layers.Layer):
               decoder_inputs,
               #decoder_inputs,
               #decoder_inputs,
-              attention_bias=decoder_self_attention_bias,
+              decoder_self_attention_bias,
               training=training,
               cache=layer_cache,
               decode_loop_step=decode_loop_step,
