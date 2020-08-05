@@ -220,15 +220,15 @@ class PrePostProcessingWrapper(tf.keras.layers.Layer):
     # Preprocessing: apply layer normalization
     training = kwargs["training"]
 
-    y = self.layer_norm(x)
-
+    #y = self.layer_norm(x)
+    
     # Get layer output
     y = self.layer(y, *args, **kwargs)
 
     # Postprocessing: apply dropout and residual connection
     if training:
       y = tf.nn.dropout(y, rate=self.postprocess_dropout)
-    return x + y
+    return self.layer_norm(x + y)
 
 
 class EncoderStack(tf.keras.layers.Layer):
@@ -291,7 +291,7 @@ class EncoderStack(tf.keras.layers.Layer):
       with tf.name_scope("layer_%d" % n):
         with tf.name_scope("self_attention"):
           encoder_inputs = self_attention_layer(
-              [encoder_inputs, encoder_inputs], training=training)
+              encoder_inputs, encoder_inputs, training=training)
         with tf.name_scope("ffn"):
           encoder_inputs = feed_forward_network(
               encoder_inputs, training=training)
@@ -384,8 +384,8 @@ class DecoderStack(tf.keras.layers.Layer):
       with tf.name_scope(layer_name):
         with tf.name_scope("self_attention"):
           decoder_inputs = self_attention_layer(
-              [decoder_inputs,
-              decoder_inputs],
+              decoder_inputs,
+              decoder_inputs,
               #decoder_inputs,
               #decoder_self_attention_bias,
               training=training,
@@ -394,9 +394,9 @@ class DecoderStack(tf.keras.layers.Layer):
               #use_bias=False)
         with tf.name_scope("encdec_attention"):
           decoder_inputs = enc_dec_attention_layer(
-              [decoder_inputs,
+              decoder_inputs,
               encoder_outputs,
-              encoder_outputs],
+              encoder_outputs,
               #attention_bias,
               training=training)#,
               #use_bias=False)
@@ -510,7 +510,6 @@ class Attention(tf.keras.layers.Layer):
     self.attention_dropout = attention_dropout
 
   def build(self, input_shape):
-    input_shape = input_shape[0]
     """Builds the layer."""
     # Layers for linearly projecting the queries, keys, and values.
     size_per_head = self.hidden_size // self.num_heads
@@ -635,10 +634,10 @@ class Attention(tf.keras.layers.Layer):
 class SelfAttention(Attention):
   """Multiheaded self-attention layer."""
 
-  def call(self, query_val_input, training, cache=None,
+  def call(self, query_input, value_input, training, cache=None,
            decode_loop_step=None):
     return super(SelfAttention, self).call(
-        [query_input[0], query_input[0], query_input[1]], training, cache, decode_loop_step)
+        query_input, query_input, value_input, training, cache, decode_loop_step)
 
 
 class FeedForwardNetwork(tf.keras.layers.Layer):
