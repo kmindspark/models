@@ -389,8 +389,8 @@ class DecoderStack(tf.keras.layers.Layer):
               #decoder_inputs,
               #decoder_self_attention_bias,
               training=training,
-              cache=layer_cache,
-              decode_loop_step=decode_loop_step)#,
+              cache=None,
+              decode_loop_step=None)#,
               #use_bias=False)
         with tf.name_scope("encdec_attention"):
           decoder_inputs = enc_dec_attention_layer(
@@ -585,7 +585,7 @@ class Attention(tf.keras.layers.Layer):
     # projections --> [batch_size, length, num_heads, dim_per_head].
     query = self.query_dense_layer(query_input)
     key = self.key_dense_layer(key_input)
-    value = self.value_dense_layer(key_input)
+    value = self.value_dense_layer(value_input)
 
     if cache is not None:
       # Combine cached keys and values with new keys and values.
