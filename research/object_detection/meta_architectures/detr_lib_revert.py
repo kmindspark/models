@@ -49,7 +49,7 @@ class Transformer(tf.keras.Model):
     #    params["vocab_size"], params["hidden_size"])
     self.encoder_stack = EncoderStack(params)
     self.decoder_stack = DecoderStack(params)
-    self.position_embedding = position_embedding.RelativePositionEmbedding(
+    self.position_embedding = TwoDimensionalPositionEmbedding(
         hidden_size=self.params["hidden_size"])
 
   def get_config(self):
