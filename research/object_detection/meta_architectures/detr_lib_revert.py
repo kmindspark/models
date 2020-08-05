@@ -291,7 +291,7 @@ class EncoderStack(tf.keras.layers.Layer):
       with tf.name_scope("layer_%d" % n):
         with tf.name_scope("self_attention"):
           encoder_inputs = self_attention_layer(
-              encoder_inputs, training=training)
+              [encoder_inputs, encoder_inputs], training=training)
         with tf.name_scope("ffn"):
           encoder_inputs = feed_forward_network(
               encoder_inputs, training=training)
@@ -384,8 +384,8 @@ class DecoderStack(tf.keras.layers.Layer):
       with tf.name_scope(layer_name):
         with tf.name_scope("self_attention"):
           decoder_inputs = self_attention_layer(
-              decoder_inputs,
-              #decoder_inputs,
+              [decoder_inputs,
+              decoder_inputs],
               #decoder_inputs,
               #decoder_self_attention_bias,
               training=training,
@@ -394,8 +394,9 @@ class DecoderStack(tf.keras.layers.Layer):
               #use_bias=False)
         with tf.name_scope("encdec_attention"):
           decoder_inputs = enc_dec_attention_layer(
-              decoder_inputs,
+              [decoder_inputs,
               encoder_outputs,
+              encoder_outputs],
               #attention_bias,
               training=training)#,
               #use_bias=False)
@@ -555,7 +556,7 @@ class Attention(tf.keras.layers.Layer):
         "attention_dropout": self.attention_dropout,
     }
 
-  def call(self, query_input, key_input, training, cache=None,
+  def call(self, query_key_value, training, cache=None,
            decode_loop_step=None):
     """Apply attention mechanism to query_input and source_input.
 
@@ -578,6 +579,7 @@ class Attention(tf.keras.layers.Layer):
     Returns:
       Attention layer output with shape [batch_size, length_query, hidden_size]
     """
+    query_input, key_input, value_input = query_key_value
     # Linearly project the query, key and value using different learned
     # projections. Splitting heads is automatically done during the linear
     # projections --> [batch_size, length, num_heads, dim_per_head].
@@ -632,10 +634,10 @@ class Attention(tf.keras.layers.Layer):
 class SelfAttention(Attention):
   """Multiheaded self-attention layer."""
 
-  def call(self, query_input, training, cache=None,
+  def call(self, query_val_input, training, cache=None,
            decode_loop_step=None):
     return super(SelfAttention, self).call(
-        query_input, query_input, training, cache, decode_loop_step)
+        [query_input[0], query_input[0], query_input[1]], training, cache, decode_loop_step)
 
 
 class FeedForwardNetwork(tf.keras.layers.Layer):
