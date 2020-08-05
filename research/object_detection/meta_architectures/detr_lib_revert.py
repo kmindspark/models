@@ -321,7 +321,7 @@ class DecoderStack(tf.keras.layers.Layer):
       self_attention_layer = attention_layer.SelfAttention(
           params["hidden_size"], params["num_heads"],
           params["attention_dropout"])
-      enc_dec_attention_layer = Attention(
+      enc_dec_attention_layer = attention_layer.Attention(
           params["hidden_size"], params["num_heads"],
           params["attention_dropout"])
       feed_forward_network = FeedForwardNetwork(
@@ -396,10 +396,9 @@ class DecoderStack(tf.keras.layers.Layer):
           decoder_inputs = enc_dec_attention_layer(
               decoder_inputs,
               encoder_outputs,
-              #attention_bias=attention_bias,
-              encoder_outputs,
-              training=training)#,
-              #use_bias=False)
+              attention_bias=attention_bias,
+              training=training,
+              use_bias=False))
         with tf.name_scope("ffn"):
           decoder_inputs = feed_forward_network(
               decoder_inputs, training=training)
