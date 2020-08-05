@@ -291,7 +291,7 @@ class EncoderStack(tf.keras.layers.Layer):
       with tf.name_scope("layer_%d" % n):
         with tf.name_scope("self_attention"):
           encoder_inputs = self_attention_layer(
-              encoder_inputs, training=training)
+              encoder_inputs, encoder_inputs, training=training)
         with tf.name_scope("ffn"):
           encoder_inputs = feed_forward_network(
               encoder_inputs, training=training)
@@ -384,6 +384,7 @@ class DecoderStack(tf.keras.layers.Layer):
       with tf.name_scope(layer_name):
         with tf.name_scope("self_attention"):
           decoder_inputs = self_attention_layer(
+              decoder_inputs,
               decoder_inputs,
               training=training,
               cache=layer_cache,
