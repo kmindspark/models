@@ -398,7 +398,7 @@ class DecoderStack(tf.keras.layers.Layer):
               encoder_outputs,
               attention_bias=attention_bias,
               training=training,
-              use_bias=False))
+              use_bias=False)
         with tf.name_scope("ffn"):
           decoder_inputs = feed_forward_network(
               decoder_inputs, training=training)
