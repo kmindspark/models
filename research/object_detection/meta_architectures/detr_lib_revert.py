@@ -249,7 +249,7 @@ class EncoderStack(tf.keras.layers.Layer):
     params = self.params
     for _ in range(params["num_hidden_layers"]):
       # Create sublayers for each layer.
-      self_attention_layer = attention_layer.SelfAttention(
+      self_attention_layer = SelfAttention(
           params["hidden_size"], params["num_heads"],
           params["attention_dropout"])
       feed_forward_network = FeedForwardNetwork(
@@ -291,7 +291,7 @@ class EncoderStack(tf.keras.layers.Layer):
       with tf.name_scope("layer_%d" % n):
         with tf.name_scope("self_attention"):
           encoder_inputs = self_attention_layer(
-              encoder_inputs, attention_bias, training=training, use_bias=False)
+              encoder_inputs, training=training)
         with tf.name_scope("ffn"):
           encoder_inputs = feed_forward_network(
               encoder_inputs, training=training)
@@ -318,10 +318,10 @@ class DecoderStack(tf.keras.layers.Layer):
     """Builds the decoder stack."""
     params = self.params
     for _ in range(params["num_hidden_layers"]):
-      self_attention_layer = attention_layer.SelfAttention(
+      self_attention_layer = SelfAttention(
           params["hidden_size"], params["num_heads"],
           params["attention_dropout"])
-      enc_dec_attention_layer = attention_layer.Attention(
+      enc_dec_attention_layer = Attention(
           params["hidden_size"], params["num_heads"],
           params["attention_dropout"])
       feed_forward_network = FeedForwardNetwork(
@@ -387,18 +387,18 @@ class DecoderStack(tf.keras.layers.Layer):
               decoder_inputs,
               #decoder_inputs,
               #decoder_inputs,
-              decoder_self_attention_bias,
+              #decoder_self_attention_bias,
               training=training,
               cache=layer_cache,
-              decode_loop_step=decode_loop_step,
-              use_bias=False)
+              decode_loop_step=decode_loop_step)#,
+              #use_bias=False)
         with tf.name_scope("encdec_attention"):
           decoder_inputs = enc_dec_attention_layer(
               decoder_inputs,
               encoder_outputs,
-              attention_bias,
-              training=training,
-              use_bias=False)
+              #attention_bias,
+              training=training)#,
+              #use_bias=False)
         with tf.name_scope("ffn"):
           decoder_inputs = feed_forward_network(
               decoder_inputs, training=training)
@@ -555,7 +555,7 @@ class Attention(tf.keras.layers.Layer):
         "attention_dropout": self.attention_dropout,
     }
 
-  def call(self, query_input, key_input, value_input, training, cache=None,
+  def call(self, query_input, key_input, training, cache=None,
            decode_loop_step=None):
     """Apply attention mechanism to query_input and source_input.
 
@@ -583,7 +583,7 @@ class Attention(tf.keras.layers.Layer):
     # projections --> [batch_size, length, num_heads, dim_per_head].
     query = self.query_dense_layer(query_input)
     key = self.key_dense_layer(key_input)
-    value = self.value_dense_layer(value_input)
+    value = self.value_dense_layer(key_input)
 
     if cache is not None:
       # Combine cached keys and values with new keys and values.
@@ -632,10 +632,10 @@ class Attention(tf.keras.layers.Layer):
 class SelfAttention(Attention):
   """Multiheaded self-attention layer."""
 
-  def call(self, query_input, value_input, training, cache=None,
+  def call(self, query_input, training, cache=None,
            decode_loop_step=None):
     return super(SelfAttention, self).call(
-        query_input, query_input, value_input, training, cache, decode_loop_step)
+        query_input, query_input, training, cache, decode_loop_step)
 
 
 class FeedForwardNetwork(tf.keras.layers.Layer):
