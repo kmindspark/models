@@ -128,10 +128,10 @@ class DETRMetaArch(model.DetectionModel):
     print("Actually predicted logits: ", logits)
     print("Queries", self.queries)
 
-    #if (not self.is_training):
-    #  fake_logits = np.zeros((x.shape[0], 100, self.num_classes + 1))
-    #  fake_logits[:,:,1] = 1000
-    #  logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
+    if (not self.is_training):
+      fake_logits = np.zeros((x.shape[0], 100, self.num_classes + 1))
+      fake_logits[:,:,1] = 1000
+      logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
 
     reshaped_bboxes = tf.reshape(bboxes_encoded, [bboxes_encoded.shape[0] * bboxes_encoded.shape[1], 1, bboxes_encoded.shape[2]])
     batches_queries = tf.repeat(tf.expand_dims(self.num_queries, 0), x.shape[0], axis=0)
