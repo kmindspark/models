@@ -187,7 +187,7 @@ class Transformer(tf.keras.Model):
           queries=decoder_inputs)
       return outputs
 
-class PrePostProcessingWrapperOld(tf.keras.layers.Layer):
+class PrePostProcessingWrapper(tf.keras.layers.Layer):
   """Wrapper class that applies layer pre-processing and post-processing."""
 
   def __init__(self, layer, layer_postprocess_dropout):
@@ -228,7 +228,7 @@ class PrePostProcessingWrapperOld(tf.keras.layers.Layer):
       y = tf.nn.dropout(y, rate=self.postprocess_dropout)
     return add + y
 
-class PrePostProcessingWrapper(tf.keras.layers.Layer):
+class PrePostProcessingWrapperOld(tf.keras.layers.Layer):
   """Wrapper class that applies layer pre-processing and post-processing."""
 
   def __init__(self, layer, layer_postprocess_dropout):
