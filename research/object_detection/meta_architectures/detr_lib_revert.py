@@ -233,7 +233,7 @@ class PrePostProcessingWrapper(tf.keras.layers.Layer):
     # Postprocessing: apply dropout and residual connection
     if training:
       y = tf.nn.dropout(y, rate=self.postprocess_dropout)
-    return self.layer_norm(x + y)
+    return x + y
 
 
 class EncoderStack(tf.keras.layers.Layer):
