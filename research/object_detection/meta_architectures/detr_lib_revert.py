@@ -220,20 +220,20 @@ class PrePostProcessingWrapper(tf.keras.layers.Layer):
     # Preprocessing: apply layer normalization
     training = kwargs["training"]
 
-    y = self.layer_norm(x)
-    newargs = [y]
-    if len(args) == 1:
-      newargs.append(self.layer_norm(args[0]))
-    else:
-      newargs.extend(args)
+    #y = self.layer_norm(x)
+    #newargs = [y]
+    #if len(args) == 1:
+    #  newargs.append(self.layer_norm(args[0]))
+    #else:
+    #  newargs.extend(args)
     
     # Get layer output
-    y = self.layer(*newargs, **kwargs)
+    y = self.layer(x, *args, **kwargs)
 
     # Postprocessing: apply dropout and residual connection
     if training:
       y = tf.nn.dropout(y, rate=self.postprocess_dropout)
-    return x + y
+    return self.layer_norm(x + y)
 
 
 class EncoderStack(tf.keras.layers.Layer):
