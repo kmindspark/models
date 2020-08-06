@@ -208,6 +208,8 @@ class PrePostProcessingWrapper(tf.keras.layers.Layer):
     # Create normalization layer
     self.layer_norm = tf.keras.layers.LayerNormalization(
         epsilon=1e-6, dtype="float32")
+    self.layer_pre_norm = tf.keras.layers.LayerNormalization(
+        epsilon=1e-6, dtype="float32")
     super(PrePostProcessingWrapper, self).build(input_shape)
 
   def get_config(self):
@@ -215,25 +217,25 @@ class PrePostProcessingWrapper(tf.keras.layers.Layer):
         "params": self.params,
     }
 
-  def call(self, discard, x, *args, **kwargs):
+  def call(self, add, x, *args, **kwargs):
     """Calls wrapped layer with same parameters."""
     # Preprocessing: apply layer normalization
     training = kwargs["training"]
 
-    #y = self.layer_norm(x)
-    #newargs = [y]
-    #if len(args) == 1:
-    #  newargs.append(self.layer_norm(args[0]))
-    #else:
-    #  newargs.extend(args)
+    y = self.layer_pre_norm(x)
+    newargs = [y]
+    if len(args) == 1:
+      newargs.append(self.layer_pre_norm(args[0]))
+    else:
+      newargs.extend(args)
     
     # Get layer output
-    y = self.layer(x, *args, **kwargs)
+    y = self.layer(*newargs, **kwargs)
 
     # Postprocessing: apply dropout and residual connection
     if training:
       y = tf.nn.dropout(y, rate=self.postprocess_dropout)
-    return x + y
+    return self.layer_norm(add + y)
 
 
 class EncoderStack(tf.keras.layers.Layer):
