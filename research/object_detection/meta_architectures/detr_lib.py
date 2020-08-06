@@ -190,11 +190,11 @@ class Transformer(tf.keras.Model):
 class PrePostProcessingWrapper(tf.keras.layers.Layer):
   """Wrapper class that applies layer pre-processing and post-processing."""
 
-  def __init__(self, layer, params):
+  def __init__(self, layer, layer_postprocess_dropout):
     super(PrePostProcessingWrapper, self).__init__()
     self.layer = layer
     self.params = params
-    self.postprocess_dropout = params["layer_postprocess_dropout"]
+    self.postprocess_dropout = layer_postprocess_dropout
 
   def build(self, input_shape):
     # Create normalization layer
