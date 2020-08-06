@@ -193,7 +193,6 @@ class PrePostProcessingWrapper(tf.keras.layers.Layer):
   def __init__(self, layer, layer_postprocess_dropout):
     super(PrePostProcessingWrapper, self).__init__()
     self.layer = layer
-    self.params = params
     self.postprocess_dropout = layer_postprocess_dropout
 
   def build(self, input_shape):
