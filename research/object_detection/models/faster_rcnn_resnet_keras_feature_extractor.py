@@ -27,7 +27,7 @@ from object_detection.utils import model_util
 
 
 _RESNET_MODEL_CONV4_LAST_LAYERS = {
-    'resnet_v1_50': 'conv4_block6_out',
+    'resnet_v1_50': 'conv5_block3_out',
     'resnet_v1_101': 'conv4_block23_out',
     'resnet_v1_152': 'conv4_block36_out',
 }
