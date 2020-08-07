@@ -80,7 +80,7 @@ class DETRMetaArch(model.DetectionModel):
     #relu_dropout=0.0, hidden_size=self.hidden_dimension, filter_size=self.hidden_dimension,
     #num_hidden_layers=3)#self.transformer_args) #hidden_size=self.hidden_dimension, filter_size=self.hidden_dimension)
     self.transformer_args = {"hidden_size": self.hidden_dimension, "attention_dropout": 0.0, "num_heads": 8, "layer_postprocess_dropout": 0.1, "dtype": tf.float32, 
-      "num_hidden_layers": 6, "filter_size": 256, "relu_dropout": 0.0}
+      "num_hidden_layers": 6, "filter_size": 2048, "relu_dropout": 0.0}
     self.transformer = detr_lib.Transformer(**self.transformer_args)#detr_lib.Transformer(attention_dropout=0.0, layer_postprocess_dropout=0.0, relu_dropout=0.0)
     #self.ffn = self.feature_extractor.get_box_classifier_feature_extractor_model()
     #self.bboxes = tf.keras.layers.Dense(4)
