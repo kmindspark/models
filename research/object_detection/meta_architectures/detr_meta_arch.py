@@ -126,7 +126,7 @@ class DETRMetaArch(model.DetectionModel):
     print("Actually predicted logits: ", logits)
     print("Queries", self.queries)
 
-    if (not self.is_training):
+    if (False): #not self.is_training):
       fake_logits = np.zeros((x.shape[0], 100, self.num_classes + 1))
       fake_logits[:,:,1] = 1000
       logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
