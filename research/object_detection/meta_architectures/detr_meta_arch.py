@@ -30,42 +30,10 @@ class DETRMetaArch(model.DetectionModel):
                 num_classes,
                 image_resizer_fn,
                 feature_extractor,
-                number_of_stages,
-                first_stage_anchor_generator,
-                first_stage_target_assigner,
-                first_stage_atrous_rate,
-                first_stage_box_predictor_arg_scope_fn,
-                first_stage_box_predictor_kernel_size,
-                first_stage_box_predictor_depth,
-                first_stage_minibatch_size,
-                first_stage_sampler,
-                first_stage_non_max_suppression_fn,
-                first_stage_max_proposals,
-                first_stage_localization_loss_weight,
-                first_stage_objectness_loss_weight,
-                crop_and_resize_fn,
-                initial_crop_size,
-                maxpool_kernel_size,
-                maxpool_stride,
-                second_stage_target_assigner,
-                second_stage_mask_rcnn_box_predictor,
-                second_stage_batch_size,
-                second_stage_sampler,
-                second_stage_non_max_suppression_fn,
-                second_stage_score_conversion_fn,
-                second_stage_localization_loss_weight,
-                second_stage_classification_loss_weight,
-                second_stage_classification_loss,
-                second_stage_mask_prediction_loss_weight=1.0,
-                hard_example_miner=None,
-                parallel_iterations=16,
-                add_summaries=True,
-                clip_anchors_to_image=False,
-                use_static_shapes=False,
-                resize_masks=True,
-                freeze_batchnorm=False,
-                return_raw_detections_during_predict=False,
-                output_final_box_features=False):
+                giou_loss_weight,
+                l1_loss_weight,
+                cls_loss_weight,
+                add_summaries):
     print("Initializing model...")
     super(DETRMetaArch, self).__init__(num_classes=num_classes)
     self._image_resizer_fn = image_resizer_fn
@@ -90,16 +58,16 @@ class DETRMetaArch(model.DetectionModel):
     self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
     self._localization_loss_iou = losses.WeightedGIOULocalizationLoss()
     self._classification_loss = losses.WeightedSoftmaxClassificationLoss()
-    self._second_stage_loc_loss_weight = second_stage_localization_loss_weight
-    self._second_stage_cls_loss_weight = second_stage_classification_loss_weight
+    self._giou_loss_weight = giou_loss_weight
+    self._l1_loss_weight = l1_loss_weight
+    self._cls_loss_weight = cls_loss_weight
     self._box_coder = self.target_assigner.get_box_coder()
-    self._parallel_iterations = parallel_iterations
     self._post_filter = tf.keras.layers.Conv2D(self.hidden_dimension, 1)
-    self._second_stage_nms_fn = second_stage_non_max_suppression_fn
+    self._second_stage_nms_fn = None #second_stage_non_max_suppression_fn
     self._box_ffn = tf.keras.Sequential(layers=[tf.keras.layers.Dense(self.hidden_dimension, activation="relu"),
                                                 tf.keras.layers.Dense(4, activation="sigmoid")])
     self.is_training = is_training
-    self._second_stage_score_conversion_fn = second_stage_score_conversion_fn
+    self._second_stage_score_conversion_fn = 
     print("CONSTRUCTOR TRAINING", self.is_training)
   @property
   def first_stage_feature_extractor_scope(self):
