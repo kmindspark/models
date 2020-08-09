@@ -53,6 +53,7 @@ if tf_version.is_tf2():
   from object_detection.models import center_net_resnet_v1_fpn_feature_extractor
   from object_detection.models import faster_rcnn_inception_resnet_v2_keras_feature_extractor as frcnn_inc_res_keras
   from object_detection.models import faster_rcnn_resnet_keras_feature_extractor as frcnn_resnet_keras
+  from object_detection.models import detr_resnet_keras_feature_extractor as detr_resnet_keras
   from object_detection.models import ssd_resnet_v1_fpn_keras_feature_extractor as ssd_resnet_v1_fpn_keras
   from object_detection.models import faster_rcnn_resnet_v1_fpn_keras_feature_extractor as frcnn_resnet_fpn_keras
   from object_detection.models.ssd_mobilenet_v1_fpn_keras_feature_extractor import SSDMobileNetV1FpnKerasFeatureExtractor
@@ -148,10 +149,16 @@ if tf_version.is_tf2():
       'hourglass_104': center_net_hourglass_feature_extractor.hourglass_104,
   }
 
+  DETR_KERAS_FEATURE_EXTRACTOR_CLASS_MAP = {
+      'detr_resnet50_keras':
+          detr_resnet_keras.DETRResnetKerasFeatureExtractor
+  }
+
   FEATURE_EXTRACTOR_MAPS = [
       CENTER_NET_EXTRACTOR_FUNCTION_MAP,
       FASTER_RCNN_KERAS_FEATURE_EXTRACTOR_CLASS_MAP,
-      SSD_KERAS_FEATURE_EXTRACTOR_CLASS_MAP
+      SSD_KERAS_FEATURE_EXTRACTOR_CLASS_MAP,
+      DETR_KERAS_FEATURE_EXTRACTOR_CLASS_MAP
   ]
 
 if tf_version.is_tf1():
@@ -757,12 +764,49 @@ def _build_faster_rcnn_model(frcnn_config, is_training, add_summaries):
             second_stage_mask_prediction_loss_weight),
         **common_kwargs)
 
+def _build_detr_keras_feature_extractor(
+    feature_extractor_config, is_training,
+    inplace_batchnorm_update=False):
+  """Builds a detr_meta_arch.DETRKerasFeatureExtractor from config.
+
+  Args:
+    feature_extractor_config: A DETRFeatureExtractor proto config from
+      detr.proto.
+    is_training: True if this feature extractor is being built for training.
+    inplace_batchnorm_update: Whether to update batch_norm inplace during
+      training. This is required for batch norm to work correctly on TPUs. When
+      this is false, user must add a control dependency on
+      tf.GraphKeys.UPDATE_OPS for train/loss op in order to update the batch
+      norm moving average parameters.
+
+  Returns:
+    detr_meta_arch.DETRKerasFeatureExtractor based on config.
+
+  Raises:
+    ValueError: On invalid feature extractor type.
+  """
+  if inplace_batchnorm_update:
+    raise ValueError('inplace batchnorm updates not supported.')
+  feature_type = feature_extractor_config.type
+  first_stage_features_stride = (
+      feature_extractor_config.first_stage_features_stride)
+  batch_norm_trainable = feature_extractor_config.batch_norm_trainable
+
+  if feature_type not in DETR_KERAS_FEATURE_EXTRACTOR_CLASS_MAP:
+    raise ValueError('Unknown DETR feature_extractor: {}'.format(
+        feature_type))
+  feature_extractor_class = DETR_KERAS_FEATURE_EXTRACTOR_CLASS_MAP[
+      feature_type]
+  return feature_extractor_class(
+      is_training, first_stage_features_stride,
+      batch_norm_trainable)
+
 def _build_detr_model(detr_config, is_training, add_summaries):
   num_classes = detr_config.num_classes
   image_resizer_fn = image_resizer_builder.build(detr_config.image_resizer)
   _check_feature_extractor_exists(detr_config.feature_extractor.type)
 
-  feature_extractor = _build_faster_rcnn_keras_feature_extractor(
+  feature_extractor = _build_detr_keras_feature_extractor(
       detr_config.feature_extractor, is_training,
       inplace_batchnorm_update=detr_config.inplace_batchnorm_update)
 
