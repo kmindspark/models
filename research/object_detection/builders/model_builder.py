@@ -1030,6 +1030,7 @@ META_ARCH_BUILDER_MAP = {
     'faster_rcnn': _build_faster_rcnn_model,
     'experimental_model': _build_experimental_model,
     'center_net': _build_center_net_model
+    'detr': _build_detr_model
 }
 
 
