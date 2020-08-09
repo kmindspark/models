@@ -25,7 +25,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='object_detection/protos/detr.proto',
   package='object_detection.protos',
   syntax='proto2',
-  serialized_pb=_b('\n\"object_detection/protos/detr.proto\x12\x17object_detection.protos\x1a.object_detection/protos/anchor_generator.proto\x1a+object_detection/protos/box_predictor.proto\x1a)object_detection/protos/hyperparams.proto\x1a+object_detection/protos/image_resizer.proto\x1a$object_detection/protos/losses.proto\x1a-object_detection/protos/post_processing.proto\"\xe7\x03\n\x04\x44\x45TR\x12\x13\n\x0bnum_classes\x18\x01 \x01(\x05\x12<\n\rimage_resizer\x18\x02 \x01(\x0b\x32%.object_detection.protos.ImageResizer\x12H\n\x11\x66\x65\x61ture_extractor\x18\x03 \x01(\x0b\x32-.object_detection.protos.DETRFeatureExtractor\x12(\n\x1dgiou_localization_loss_weight\x18\x04 \x01(\x02:\x01\x31\x12&\n\x1bl1_localization_loss_weight\x18\x05 \x01(\x02:\x01\x31\x12%\n\x1a\x63lassification_loss_weight\x18\x06 \x01(\x02:\x01\x31\x12+\n\x1cuse_matmul_gather_in_matcher\x18\x07 \x01(\x08:\x05\x66\x61lse\x12@\n\x0fpost_processing\x18\x08 \x01(\x0b\x32\'.object_detection.protos.PostProcessing\x12\x18\n\x0bnum_queries\x18\t \x01(\x05:\x03\x31\x30\x30\x12\x17\n\nhidden_dim\x18\n \x01(\x05:\x03\x32\x35\x36\x12\'\n\x18inplace_batchnorm_update\x18\x0b \x01(\x08:\x05\x66\x61lse\"I\n\x14\x44\x45TRFeatureExtractor\x12\x0c\n\x04type\x18\x01 \x01(\t\x12#\n\x14\x62\x61tch_norm_trainable\x18\x02 \x01(\x08:\x05\x66\x61lse')
+  serialized_pb=_b('\n\"object_detection/protos/detr.proto\x12\x17object_detection.protos\x1a.object_detection/protos/anchor_generator.proto\x1a+object_detection/protos/box_predictor.proto\x1a)object_detection/protos/hyperparams.proto\x1a+object_detection/protos/image_resizer.proto\x1a$object_detection/protos/losses.proto\x1a-object_detection/protos/post_processing.proto\"\xe7\x03\n\x04\x44\x45TR\x12\x13\n\x0bnum_classes\x18\x01 \x01(\x05\x12<\n\rimage_resizer\x18\x02 \x01(\x0b\x32%.object_detection.protos.ImageResizer\x12H\n\x11\x66\x65\x61ture_extractor\x18\x03 \x01(\x0b\x32-.object_detection.protos.DETRFeatureExtractor\x12(\n\x1dgiou_localization_loss_weight\x18\x04 \x01(\x02:\x01\x31\x12&\n\x1bl1_localization_loss_weight\x18\x05 \x01(\x02:\x01\x31\x12%\n\x1a\x63lassification_loss_weight\x18\x06 \x01(\x02:\x01\x31\x12+\n\x1cuse_matmul_gather_in_matcher\x18\x07 \x01(\x08:\x05\x66\x61lse\x12@\n\x0fpost_processing\x18\x08 \x01(\x0b\x32\'.object_detection.protos.PostProcessing\x12\x18\n\x0bnum_queries\x18\t \x01(\x05:\x03\x31\x30\x30\x12\x17\n\nhidden_dim\x18\n \x01(\x05:\x03\x32\x35\x36\x12\'\n\x18inplace_batchnorm_update\x18\x0b \x01(\x08:\x05\x66\x61lse\"f\n\x14\x44\x45TRFeatureExtractor\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\x1b\n\x0f\x66\x65\x61tures_stride\x18\x02 \x01(\x05:\x02\x33\x32\x12#\n\x14\x62\x61tch_norm_trainable\x18\x03 \x01(\x08:\x05\x66\x61lse')
   ,
   dependencies=[object__detection_dot_protos_dot_anchor__generator__pb2.DESCRIPTOR,object__detection_dot_protos_dot_box__predictor__pb2.DESCRIPTOR,object__detection_dot_protos_dot_hyperparams__pb2.DESCRIPTOR,object__detection_dot_protos_dot_image__resizer__pb2.DESCRIPTOR,object__detection_dot_protos_dot_losses__pb2.DESCRIPTOR,object__detection_dot_protos_dot_post__processing__pb2.DESCRIPTOR,])
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
@@ -149,8 +149,15 @@ _DETRFEATUREEXTRACTOR = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       options=None),
     _descriptor.FieldDescriptor(
-      name='batch_norm_trainable', full_name='object_detection.protos.DETRFeatureExtractor.batch_norm_trainable', index=1,
-      number=2, type=8, cpp_type=7, label=1,
+      name='features_stride', full_name='object_detection.protos.DETRFeatureExtractor.features_stride', index=1,
+      number=2, type=5, cpp_type=1, label=1,
+      has_default_value=True, default_value=32,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='batch_norm_trainable', full_name='object_detection.protos.DETRFeatureExtractor.batch_norm_trainable', index=2,
+      number=3, type=8, cpp_type=7, label=1,
       has_default_value=True, default_value=False,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -168,7 +175,7 @@ _DETRFEATUREEXTRACTOR = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=819,
-  serialized_end=892,
+  serialized_end=921,
 )
 
 _DETR.fields_by_name['image_resizer'].message_type = object__detection_dot_protos_dot_image__resizer__pb2._IMAGERESIZER

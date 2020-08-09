@@ -59,8 +59,11 @@ message DETRFeatureExtractor {
   // See builders/model_builder.py for expected types).
   optional string type = 1;
 
+  // Output stride of extracted feature extractor feature map.
+  optional int32 features_stride = 2 [default = 32];
+
   // Whether to update batch norm parameters during training or not.
   // When training with a relative large batch size (e.g. 8), it could be
   // desirable to enable batch norm update.
-  optional bool batch_norm_trainable = 2 [default = false];
+  optional bool batch_norm_trainable = 3 [default = false];
 }

@@ -69,6 +69,7 @@ class DETRResnetKerasFeatureExtractor(
   def preprocess(self, resized_inputs):
     """Faster R-CNN Resnet V1 preprocessing.
 
+
     VGG style channel mean subtraction as described here:
     https://gist.github.com/ksimonyan/211839e770f7b538e2d8#file-readme-md
     Note that if the number of channels is not equal to 3, the mean subtraction
