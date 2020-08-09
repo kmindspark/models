@@ -788,8 +788,8 @@ def _build_detr_keras_feature_extractor(
   if inplace_batchnorm_update:
     raise ValueError('inplace batchnorm updates not supported.')
   feature_type = feature_extractor_config.type
-  first_stage_features_stride = (
-      feature_extractor_config.first_stage_features_stride)
+  features_stride = (
+      feature_extractor_config.features_stride)
   batch_norm_trainable = feature_extractor_config.batch_norm_trainable
 
   if feature_type not in DETR_KERAS_FEATURE_EXTRACTOR_CLASS_MAP:
@@ -798,7 +798,7 @@ def _build_detr_keras_feature_extractor(
   feature_extractor_class = DETR_KERAS_FEATURE_EXTRACTOR_CLASS_MAP[
       feature_type]
   return feature_extractor_class(
-      is_training, first_stage_features_stride,
+      is_training, features_stride,
       batch_norm_trainable)
 
 def _build_detr_model(detr_config, is_training, add_summaries):
