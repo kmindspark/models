@@ -175,7 +175,7 @@ class DETRResnetKerasFeatureExtractor(
 
 
 class DETRResnet50KerasFeatureExtractor(
-    FasterRCNNResnetKerasFeatureExtractor):
+    DETRResnetKerasFeatureExtractor):
   """Faster R-CNN with Resnet50 feature extractor implementation."""
 
   def __init__(self,
