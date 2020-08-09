@@ -24,6 +24,45 @@ from object_detection.meta_architectures import detr_lib
 from object_detection.matchers import hungarian_matcher
 from object_detection.core import post_processing
 
+class DETRKerasFeatureExtractor(object):
+  """Keras-based DETR Feature Extractor definition."""
+
+  def __init__(self,
+               is_training,
+               first_stage_features_stride,
+               batch_norm_trainable=False,
+               weight_decay=0.0):
+    """Constructor.
+
+    Args:
+      is_training: A boolean indicating whether the training version of the
+        computation graph should be constructed.
+      first_stage_features_stride: Output stride of extracted RPN feature map.
+      batch_norm_trainable: Whether to update batch norm parameters during
+        training or not. When training with a relative large batch size
+        (e.g. 8), it could be desirable to enable batch norm update.
+      weight_decay: float weight decay for feature extractor (default: 0.0).
+    """
+    self._is_training = is_training
+    self._first_stage_features_stride = first_stage_features_stride
+    self._train_batch_norm = (batch_norm_trainable and is_training)
+    self._weight_decay = weight_decay
+
+  @abc.abstractmethod
+  def preprocess(self, resized_inputs):
+    """Feature-extractor specific preprocessing (minus image resizing)."""
+    pass
+
+  @abc.abstractmethod
+  def get_proposal_feature_extractor_model(self, name):
+    """Get model that extracts first stage RPN features, to be overridden."""
+    pass
+
+  @abc.abstractmethod
+  def get_box_classifier_feature_extractor_model(self, name):
+    """Get model that extracts second stage box classifier features."""
+    pass
+
 class DETRMetaArch(model.DetectionModel):
   def __init__(self,
                 is_training,
@@ -33,25 +72,22 @@ class DETRMetaArch(model.DetectionModel):
                 giou_loss_weight,
                 l1_loss_weight,
                 cls_loss_weight,
+                score_conversion_fn,
+                target_assigner,
+                num_queries,
+                hidden_dimension,
                 add_summaries):
     print("Initializing model...")
     super(DETRMetaArch, self).__init__(num_classes=num_classes)
     self._image_resizer_fn = image_resizer_fn
-    self.num_queries = 100
-    self.hidden_dimension = 256
+    self.num_queries = num_queries
+    self.hidden_dimension = hidden_dimension
     self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=is_training)#, weight_decay=0.0001)
     self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()
-    #for layer in self.first_stage.layers:
-    #  layer.trainable = False
     self.target_assigner = target_assigner.create_target_assigner('DETR', 'detection')
-    #self.transformer = #detr_lib.Transformer(attention_dropout=0.0, layer_postprocess_dropout=0.0,
-    #relu_dropout=0.0, hidden_size=self.hidden_dimension, filter_size=self.hidden_dimension,
-    #num_hidden_layers=3)#self.transformer_args) #hidden_size=self.hidden_dimension, filter_size=self.hidden_dimension)
     self.transformer_args = {"hidden_size": self.hidden_dimension, "attention_dropout": 0.0, "num_heads": 8, "layer_postprocess_dropout": 0.1, "dtype": tf.float32, 
       "num_hidden_layers": 6, "filter_size": 2048, "relu_dropout": 0.0}
-    self.transformer = detr_lib.Transformer(**self.transformer_args)#detr_lib.Transformer(attention_dropout=0.0, layer_postprocess_dropout=0.0, relu_dropout=0.0)
-    #self.ffn = self.feature_extractor.get_box_classifier_feature_extractor_model()
-    #self.bboxes = tf.keras.layers.Dense(4)
+    self.transformer = detr_lib.Transformer(**self.transformer_args)
     self.cls = tf.keras.layers.Dense(num_classes + 1)
     self.cls_activation = tf.keras.layers.Softmax()
     self.queries = tf.keras.backend.variable(value=tf.random_normal_initializer(stddev=1.0)([self.num_queries, self.hidden_dimension]), name="object_queries", dtype=tf.float32)# tf.random_normal_initializer tf.keras.backend.variable(tf.zeros([self.num_queries, self.hidden_dimension]), name="object_queries") #tf.zeros([self.num_queries, self.hidden_dimension]), dtype=tf.float32) #tf.random.uniform([self.num_queries, self.hidden_dimension]) tf.Variable(initial_value=tf.zeros((self.num_queries, self.hidden_dimension)), trainable=True)
@@ -63,11 +99,10 @@ class DETRMetaArch(model.DetectionModel):
     self._cls_loss_weight = cls_loss_weight
     self._box_coder = self.target_assigner.get_box_coder()
     self._post_filter = tf.keras.layers.Conv2D(self.hidden_dimension, 1)
-    self._second_stage_nms_fn = None #second_stage_non_max_suppression_fn
+    self.score_conversion_fn = score_conversion_fn
     self._box_ffn = tf.keras.Sequential(layers=[tf.keras.layers.Dense(self.hidden_dimension, activation="relu"),
                                                 tf.keras.layers.Dense(4, activation="sigmoid")])
     self.is_training = is_training
-    self._second_stage_score_conversion_fn = 
     print("CONSTRUCTOR TRAINING", self.is_training)
   @property
   def first_stage_feature_extractor_scope(self):
@@ -79,9 +114,6 @@ class DETRMetaArch(model.DetectionModel):
 
 
   def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
-    #if not self.is_training:
-    #  self.queries = tf.keras.backend.variable(value=tf.random_normal_initializer(stddev=20.0)([self.num_queries, self.hidden_dimension]), name="object_queries", dtype=tf.float32)
-
     image_shape = tf.shape(preprocessed_inputs)
     with tf.name_scope("FirstStage"):
       x = self.first_stage(preprocessed_inputs, training=self.is_training)
@@ -430,20 +462,9 @@ class DETRMetaArch(model.DetectionModel):
     scores are to be interpreted as logits, but if a score_converter is used,
     then scores are remapped (and may thus have a different interpretation).
 
-    If number_of_stages=1, the returned results represent proposals from the
-    first stage RPN and are padded to have self.num_queries for each
-    image; otherwise, the results can be interpreted as multiclass detections
-    from the full two-stage model and are padded to self._max_detections.
-
     Args:
       prediction_dict: a dictionary holding prediction tensors (see the
-        documentation for the predict method.  If number_of_stages=1, we
-        expect prediction_dict to contain `rpn_box_encodings`,
-        `rpn_objectness_predictions_with_background`, `rpn_features_to_crop`,
-        and `anchors` fields.  Otherwise we expect prediction_dict to
-        additionally contain `refined_box_encodings`,
-        `class_predictions_with_background`, `num_proposals`,
-        `proposal_boxes` and, optionally, `mask_predictions` fields.
+        documentation for the predict method.
       true_image_shapes: int32 tensor of shape [batch, 3] where each row is
         of the form [height, width, channels] indicating the shapes
         of true images in the resized images, as resized images can be padded

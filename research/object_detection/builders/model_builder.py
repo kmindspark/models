@@ -766,17 +766,19 @@ def _build_detr_model(is_training, add_summaries, detr_config):
       detr_config.feature_extractor, is_training,
       inplace_batchnorm_update=detr_config.inplace_batchnorm_update)
 
-  detr_target_assigner = target_assigner.create_target_assigner(
+  target_assigner = target_assigner.create_target_assigner(
       'DETR',
       'proposal',
       use_matmul_gather=detr_config.use_matmul_gather_in_matcher)
   
-  (_, second_stage_score_conversion_fn) = post_processing_builder.build(
+  (_, score_conversion_fn) = post_processing_builder.build(
       detr_config.second_stage_post_processing)
   
   giou_loss_weight = detr_config.giou_localization_loss_weight
   l1_loss_weight = detr_config.l1_localization_loss_weight
   cls_loss_weight = detr_config.classification_loss_weight
+  num_queries = detr_config.num_queries
+  hidden_dimension = detr_config.hidden_dimension
 
   common_kwargs = {
       'is_training':
@@ -793,6 +795,14 @@ def _build_detr_model(is_training, add_summaries, detr_config):
           l1_loss_weight,
       'cls_loss_weight':
           cls_loss_weight,
+      'score_conversion_fn':
+          score_conversion_fn,
+      'target_assigner':
+          target_assigner,
+      'num_queries':
+          num_queries,
+      'hidden_dimension':
+          hidden_dimension,
       'add_summaries':
           add_summaries,
   }
