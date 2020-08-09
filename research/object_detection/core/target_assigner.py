@@ -465,7 +465,6 @@ def create_target_assigner(reference, stage=None,
     box_coder_instance = detr_box_coder.DETRBoxCoder()
 
   elif reference == 'DETR':
-    print(laksldfj)
     similarity_calc = sim_calc.IouAndClassSimilarity()
     matcher = hungarian_matcher.HungarianBipartiteMatcher()
     box_coder_instance = detr_box_coder.DETRBoxCoder()
