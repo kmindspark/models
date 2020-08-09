@@ -200,8 +200,8 @@ class DETRResnet50KerasFeatureExtractor(
         weight_decay=weight_decay)
 
 
-class DETResnet101KerasFeatureExtractor(
-    FasterRCNNResnetKerasFeatureExtractor):
+class DETRResnet101KerasFeatureExtractor(
+    DETRResnetKerasFeatureExtractor):
   """Faster R-CNN with Resnet101 feature extractor implementation."""
 
   def __init__(self,
@@ -227,7 +227,7 @@ class DETResnet101KerasFeatureExtractor(
 
 
 class DETRResnet152KerasFeatureExtractor(
-    FasterRCNNResnetKerasFeatureExtractor):
+    DETRResnetKerasFeatureExtractor):
   """Faster R-CNN with Resnet152 feature extractor implementation."""
 
   def __init__(self,
