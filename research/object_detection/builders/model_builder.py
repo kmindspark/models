@@ -766,7 +766,7 @@ def _build_detr_model(is_training, add_summaries, detr_config):
       detr_config.feature_extractor, is_training,
       inplace_batchnorm_update=detr_config.inplace_batchnorm_update)
 
-  target_assigner = target_assigner.create_target_assigner(
+  detr_target_assigner = target_assigner.create_target_assigner(
       'DETR',
       'proposal',
       use_matmul_gather=detr_config.use_matmul_gather_in_matcher)
@@ -798,7 +798,7 @@ def _build_detr_model(is_training, add_summaries, detr_config):
       'score_conversion_fn':
           score_conversion_fn,
       'target_assigner':
-          target_assigner,
+          detr_target_assigner,
       'num_queries':
           num_queries,
       'hidden_dimension':
