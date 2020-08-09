@@ -816,7 +816,7 @@ def _build_detr_model(detr_config, is_training, add_summaries):
       use_matmul_gather=detr_config.use_matmul_gather_in_matcher)
   
   (_, score_conversion_fn) = post_processing_builder.build(
-      detr_config.second_stage_post_processing)
+      detr_config.post_processing)
   
   giou_loss_weight = detr_config.giou_localization_loss_weight
   l1_loss_weight = detr_config.l1_localization_loss_weight
