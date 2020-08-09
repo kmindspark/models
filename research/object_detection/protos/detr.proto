@@ -46,6 +46,12 @@ message DETR {
   
   // Size of the hidden dimension for the transformer.
   optional int32 hidden_dim = 10 [default = 256];
+
+  // Whether to update batch_norm inplace during training. This is required
+  // for batch norm to work correctly on TPUs. When this is false, user must add
+  // a control dependency on tf.GraphKeys.UPDATE_OPS for train/loss op in order
+  // to update the batch norm moving average parameters.
+  optional bool inplace_batchnorm_update = 11 [default = false];
 }
 
 message DETRFeatureExtractor {
