@@ -39,7 +39,7 @@ message DETR {
   // Post processing to apply on the second stage box classifier predictions.
   // Note: the `score_converter` provided to the DETRMetaArch constructor
   // is taken from this `second_stage_post_processing` proto.
-  optional PostProcessing second_stage_post_processing = 8;
+  optional PostProcessing post_processing = 8;
 
   // Number of object queries for the decoder to use and learn.
   optional int32 num_queries = 9 [default = 100];
