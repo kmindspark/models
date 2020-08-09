@@ -45,7 +45,7 @@ message DETR {
   optional int32 num_queries = 9 [default = 100];
   
   // Size of the hidden dimension for the transformer.
-  optional int32 hidden_dim = 10 [default = 256];
+  optional int32 hidden_dimension = 10 [default = 256];
 
   // Whether to update batch_norm inplace during training. This is required
   // for batch norm to work correctly on TPUs. When this is false, user must add
