@@ -151,7 +151,7 @@ if tf_version.is_tf2():
 
   DETR_KERAS_FEATURE_EXTRACTOR_CLASS_MAP = {
       'detr_resnet50_keras':
-          detr_resnet_keras.DETRResnetKerasFeatureExtractor
+          detr_resnet_keras.DETRResnet50KerasFeatureExtractor
   }
 
   FEATURE_EXTRACTOR_MAPS = [

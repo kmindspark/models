@@ -39,7 +39,7 @@ class DETRResnetKerasFeatureExtractor(
                is_training,
                resnet_v1_base_model,
                resnet_v1_base_model_name,
-               first_stage_features_stride=16,
+               first_stage_features_stride=32,
                batch_norm_trainable=False,
                weight_decay=0.0):
     """Constructor.
@@ -56,7 +56,7 @@ class DETRResnetKerasFeatureExtractor(
     Raises:
       ValueError: If `first_stage_features_stride` is not 8 or 16.
     """
-    if first_stage_features_stride != 16:
+    if first_stage_features_stride != 32:
       raise ValueError('`first_stage_features_stride` must be 16.')
     super(DETRResnetKerasFeatureExtractor, self).__init__(
         is_training, first_stage_features_stride, batch_norm_trainable,
