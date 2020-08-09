@@ -757,7 +757,7 @@ def _build_faster_rcnn_model(frcnn_config, is_training, add_summaries):
             second_stage_mask_prediction_loss_weight),
         **common_kwargs)
 
-def _build_detr_model(is_training, add_summaries, detr_config):
+def _build_detr_model(detr_config, is_training, add_summaries):
   num_classes = detr_config.num_classes
   image_resizer_fn = image_resizer_builder.build(detr_config.image_resizer)
   _check_feature_extractor_exists(detr_config.feature_extractor.type)
