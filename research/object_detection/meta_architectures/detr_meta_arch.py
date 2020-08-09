@@ -422,11 +422,11 @@ class DETRMetaArch(model.DetectionModel):
           second_stage_cls_losses * tf.cast(paddings_indicator,
                                             dtype=tf.float32))
 
-      localization_loss = tf.multiply(self._second_stage_loc_loss_weight,
+      localization_loss = tf.multiply(1.0,
                                       second_stage_loc_loss,
                                       name='localization_loss')
 
-      classification_loss = tf.multiply(self._second_stage_cls_loss_weight,
+      classification_loss = tf.multiply(1.0,
                                         second_stage_cls_loss,
                                         name='classification_loss')
 
