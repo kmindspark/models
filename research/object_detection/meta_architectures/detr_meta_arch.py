@@ -99,7 +99,7 @@ class DETRMetaArch(model.DetectionModel):
     self._cls_loss_weight = cls_loss_weight
     self._box_coder = self.target_assigner.get_box_coder()
     self._post_filter = tf.keras.layers.Conv2D(self.hidden_dimension, 1)
-    self.score_conversion_fn = score_conversion_fn
+    self._score_conversion_fn = score_conversion_fn
     self._box_ffn = tf.keras.Sequential(layers=[tf.keras.layers.Dense(self.hidden_dimension, activation="relu"),
                                                 tf.keras.layers.Dense(4, activation="sigmoid")])
     self.is_training = is_training
