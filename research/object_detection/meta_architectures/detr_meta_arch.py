@@ -83,14 +83,24 @@ class DETRMetaArch(model.DetectionModel):
     self.num_queries = num_queries
     self.hidden_dimension = hidden_dimension
     self.feature_extractor = feature_extractor
-    self.first_stage = self.feature_extractor.get_proposal_feature_extractor_model()
+    self.first_stage = feature_extractor.get_proposal_feature_extractor_model()
     self.target_assigner = target_assigner
-    self.transformer_args = {"hidden_size": self.hidden_dimension, "attention_dropout": 0.0, "num_heads": 8, "layer_postprocess_dropout": 0.1, "dtype": tf.float32, 
-      "num_hidden_layers": 6, "filter_size": 2048, "relu_dropout": 0.0}
+    self.transformer_args = {"hidden_size": self.hidden_dimension,
+                             "attention_dropout": 0.0,
+                             "num_heads": 8,
+                             "layer_postprocess_dropout": 0.1,
+                             "dtype": tf.float32, 
+                             "num_hidden_layers": 6,
+                             "filter_size": 2048,
+                             "relu_dropout": 0.0}
     self.transformer = detr_lib.Transformer(**self.transformer_args)
     self.cls = tf.keras.layers.Dense(num_classes + 1)
     self.cls_activation = tf.keras.layers.Softmax()
-    self.queries = tf.keras.backend.variable(value=tf.random_normal_initializer(stddev=1.0)([self.num_queries, self.hidden_dimension]), name="object_queries", dtype=tf.float32)# tf.random_normal_initializer tf.keras.backend.variable(tf.zeros([self.num_queries, self.hidden_dimension]), name="object_queries") #tf.zeros([self.num_queries, self.hidden_dimension]), dtype=tf.float32) #tf.random.uniform([self.num_queries, self.hidden_dimension]) tf.Variable(initial_value=tf.zeros((self.num_queries, self.hidden_dimension)), trainable=True)
+    self.queries = tf.keras.backend.variable(
+        value=tf.random_normal_initializer(stddev=1.0)(
+            [self.num_queries, self.hidden_dimension]),
+            name="object_queries",
+            dtype=tf.float32)
     self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
     self._localization_loss_iou = losses.WeightedGIOULocalizationLoss()
     self._classification_loss = losses.WeightedSoftmaxClassificationLoss()
@@ -98,12 +108,14 @@ class DETRMetaArch(model.DetectionModel):
     self._l1_loss_weight = l1_loss_weight
     self._cls_loss_weight = cls_loss_weight
     self._box_coder = self.target_assigner.get_box_coder()
-    self._post_filter = tf.keras.layers.Conv2D(self.hidden_dimension, 1)
+    self._post_filter = tf.keras.layers.Conv2D(
+        self.hidden_dimension, 1)
     self._score_conversion_fn = score_conversion_fn
-    self._box_ffn = tf.keras.Sequential(layers=[tf.keras.layers.Dense(self.hidden_dimension, activation="relu"),
-                                                tf.keras.layers.Dense(4, activation="sigmoid")])
+    self._box_ffn = tf.keras.Sequential(
+        layers=[tf.keras.layers.Dense(
+            self.hidden_dimension, activation="relu"),
+                tf.keras.layers.Dense(4, activation="sigmoid")])
     self.is_training = is_training
-    print("CONSTRUCTOR TRAINING", self.is_training)
   @property
   def first_stage_feature_extractor_scope(self):
     return 'FirstStageFeatureExtractor'
@@ -889,6 +901,8 @@ class DETRMetaArch(model.DetectionModel):
         A dict mapping variable names (to load from a checkpoint) to variables in
         the model graph.
       """
+      for i in range(100):
+        print("RESTORING FROM CLASSIFICATION CHECKPT")
       variables_to_restore = {}
       for variable in variables_helper.get_global_variables_safely():
         for scope_name in [first_stage_feature_extractor_scope]:
