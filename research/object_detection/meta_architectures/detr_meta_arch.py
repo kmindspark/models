@@ -901,8 +901,7 @@ class DETRMetaArch(model.DetectionModel):
         A dict mapping variable names (to load from a checkpoint) to variables in
         the model graph.
       """
-      for i in range(100):
-        print("RESTORING FROM CLASSIFICATION CHECKPT")
+      print("RESTORING FROM CLASSIFICATION CHECKPT")
       variables_to_restore = {}
       for variable in variables_helper.get_global_variables_safely():
         for scope_name in [first_stage_feature_extractor_scope]:
