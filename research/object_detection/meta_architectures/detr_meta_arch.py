@@ -118,7 +118,7 @@ class DETRMetaArch(model.DetectionModel):
     self.is_training = is_training
 
   def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
-    start_time = time.time()
+    start_time = tf.timestamp()
     image_shape = tf.shape(preprocessed_inputs)
     
     x = self.first_stage(preprocessed_inputs, training=self.is_training)
@@ -140,7 +140,7 @@ class DETRMetaArch(model.DetectionModel):
     batches_queries = tf.repeat(tf.expand_dims(self.num_queries,
         0), x.shape[0], axis=0)
 
-    tf.print("Done with inference:", time.time() - start_time)
+    tf.print("Done with inference:", tf.timestamp() - start_time)
 
     return {
       "refined_box_encodings": reshaped_bboxes,
@@ -240,7 +240,7 @@ class DETRMetaArch(model.DetectionModel):
         'second_stage_classification_loss') to scalar tensors representing
         corresponding loss values.
     """
-    start_time = time.time()
+    start_time = tf.timestamp()
     with tf.name_scope(scope, 'Loss', prediction_dict.values()):
       (groundtruth_boxlists, groundtruth_classes_with_background_list,
        groundtruth_weights_list) = self._format_groundtruth_data(
@@ -256,7 +256,7 @@ class DETRMetaArch(model.DetectionModel):
                 fields.DetectionResultFields.detection_boxes),
             prediction_dict.get(
                 fields.DetectionResultFields.num_detections))
-    print("Loss time:", time.time() - start_time)
+    tf.print("Loss time:", tf.timestamp() - start_time)
     return loss_dict
 
   def _loss_box_classifier(self,
