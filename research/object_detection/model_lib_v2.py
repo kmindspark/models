@@ -628,6 +628,11 @@ def train_loop(
         for _ in range(global_step.value(), train_steps,
                        num_steps_per_iteration):
 
+          if (global_step.value() == 150):
+            tf.profiler.experimental.start(model_dir)
+          elif (global_step.value() == 160):
+            tf.profiler.experimental.stop()
+
           loss = _dist_train_step(train_input_iter)
 
           time_taken = time.time() - last_step_time
@@ -637,7 +642,7 @@ def train_loop(
               'steps_per_sec', num_steps_per_iteration * 1.0 / time_taken,
               step=global_step)
 
-          if global_step.value() - logged_step >= 20:
+          if global_step.value() - logged_step >= 1:
             tf.logging.info(
                 'Step {} per-step time {:.3f}s loss={:.3f}'.format(
                     global_step.value(), time_taken / num_steps_per_iteration,
