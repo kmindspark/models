@@ -23,6 +23,7 @@ from object_detection.meta_architectures import detr_lib
 #from object_detection.meta_architectures import detr_transformer
 from object_detection.matchers import hungarian_matcher
 from object_detection.core import post_processing
+import time
 
 class DETRKerasFeatureExtractor(object):
   """Keras-based DETR Feature Extractor definition."""
@@ -117,6 +118,7 @@ class DETRMetaArch(model.DetectionModel):
     self.is_training = is_training
 
   def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
+    start_time = time.time()
     image_shape = tf.shape(preprocessed_inputs)
     
     x = self.first_stage(preprocessed_inputs, training=self.is_training)
@@ -137,6 +139,8 @@ class DETRMetaArch(model.DetectionModel):
         1, bboxes_encoded.shape[2]])
     batches_queries = tf.repeat(tf.expand_dims(self.num_queries,
         0), x.shape[0], axis=0)
+
+    tf.print("Done with inference:", time.time() - start_time)
 
     return {
       "refined_box_encodings": reshaped_bboxes,
@@ -236,6 +240,7 @@ class DETRMetaArch(model.DetectionModel):
         'second_stage_classification_loss') to scalar tensors representing
         corresponding loss values.
     """
+    start_time = time.time()
     with tf.name_scope(scope, 'Loss', prediction_dict.values()):
       (groundtruth_boxlists, groundtruth_classes_with_background_list,
        groundtruth_weights_list) = self._format_groundtruth_data(
@@ -251,6 +256,7 @@ class DETRMetaArch(model.DetectionModel):
                 fields.DetectionResultFields.detection_boxes),
             prediction_dict.get(
                 fields.DetectionResultFields.num_detections))
+    print("Loss time:", time.time() - start_time)
     return loss_dict
 
   def _loss_box_classifier(self,
