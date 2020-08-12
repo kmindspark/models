@@ -233,6 +233,7 @@ def eager_train_step(detection_model,
   Returns:
     The total loss observed at this training step
   """
+  start_time = tf.timestamp()
   # """Execute a single training step in the TF v2 style loop."""
   is_training = True
 
@@ -282,6 +283,7 @@ def eager_train_step(detection_model,
       data=features[fields.InputDataFields.image],
       max_outputs=3)
   tf.print("Backprop time:", tf.timestamp() - current_time)
+  tf.print("Total step time:", tf.timestamp() - start_time)
   return total_loss
 
 
@@ -597,6 +599,7 @@ def train_loop(
           return loss
 
         def _sample_and_train(strategy, train_step_fn, data_iterator):
+          cur_time = tf.timestamp()
           features, labels = data_iterator.next()
           if hasattr(tf.distribute.Strategy, 'run'):
             per_replica_losses = strategy.run(
@@ -606,6 +609,7 @@ def train_loop(
                 train_step_fn, args=(features, labels))
           # TODO(anjalisridhar): explore if it is safe to remove the
           ## num_replicas scaling of the loss and switch this to a ReduceOp.Mean
+          tf.print("Sample and train func time:", tf.timestampe() - cur_time)
           return strategy.reduce(tf.distribute.ReduceOp.SUM,
                                  per_replica_losses, axis=None)
 
@@ -631,10 +635,10 @@ def train_loop(
         for _ in range(global_step.value(), train_steps,
                        num_steps_per_iteration):
 
-          if (global_step.value() == 150):
-            tf2.profiler.experimental.start(model_dir)
-          elif (global_step.value() == 160):
-            tf2.profiler.experimental.stop()
+          #if (global_step.value() == 150):
+          #  tf2.profiler.experimental.start(model_dir)
+          #elif (global_step.value() == 160):
+          #  tf2.profiler.experimental.stop()
 
           loss = _dist_train_step(train_input_iter)
 
