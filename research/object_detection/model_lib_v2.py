@@ -23,6 +23,7 @@ import os
 import time
 
 import tensorflow.compat.v1 as tf
+import tensorflow.compat.v2 as tf2
 
 from object_detection import eval_util
 from object_detection import inputs
@@ -629,9 +630,9 @@ def train_loop(
                        num_steps_per_iteration):
 
           if (global_step.value() == 150):
-            tf.profiler.experimental.start(model_dir)
+            tf2.profiler.experimental.start(model_dir)
           elif (global_step.value() == 160):
-            tf.profiler.experimental.stop()
+            tf2.profiler.experimental.stop()
 
           loss = _dist_train_step(train_input_iter)
 
