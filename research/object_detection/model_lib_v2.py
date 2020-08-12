@@ -259,6 +259,7 @@ def eager_train_step(detection_model,
 
   trainable_variables = detection_model.trainable_variables
 
+  current_time = tf.timestamp()
   gradients = tape.gradient(total_loss, trainable_variables)
 
   #print("TYPE: ", type(trainable_variables))
@@ -280,6 +281,7 @@ def eager_train_step(detection_model,
       step=global_step,
       data=features[fields.InputDataFields.image],
       max_outputs=3)
+  tf.print("Backprop time:", tf.timestamp() - current_time)
   return total_loss
 
 
