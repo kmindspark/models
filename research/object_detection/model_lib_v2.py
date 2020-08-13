@@ -609,7 +609,7 @@ def train_loop(
                 train_step_fn, args=(features, labels))
           # TODO(anjalisridhar): explore if it is safe to remove the
           ## num_replicas scaling of the loss and switch this to a ReduceOp.Mean
-          tf.print("Sample and train func time:", tf.timestampe() - cur_time)
+          tf.print("Sample and train func time:", tf.timestamp() - cur_time)
           return strategy.reduce(tf.distribute.ReduceOp.SUM,
                                  per_replica_losses, axis=None)
 
