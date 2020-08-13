@@ -641,7 +641,7 @@ def train_loop(
           #  tf2.profiler.experimental.stop()
           now = time.time()
           loss = _dist_train_step(train_input_iter)
-          tf.logging.info("Total dist train step time: ", str(time.time() - now))
+          tf.logging.info("Total dist train step time: " + str(time.time() - now))
 
           time_taken = time.time() - last_step_time
           last_step_time = time.time()
@@ -662,7 +662,7 @@ def train_loop(
             manager.save()
             checkpointed_step = int(global_step.value())
 
-          tf.logging.info("Total loop iter time: ", str(time.time() - now))
+          tf.logging.info("Total loop iter time: " + str(time.time() - now))
 
   # Remove the checkpoint directories of the non-chief workers that
   # MultiWorkerMirroredStrategy forces us to save during sync distributed
