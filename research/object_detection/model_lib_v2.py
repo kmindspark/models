@@ -619,12 +619,16 @@ def train_loop(
         def _dist_train_step(data_iterator):
           """A distributed train step."""
 
+          start_time = tf.timestamp()
+
           if num_steps_per_iteration > 1:
             tf.print("NUM STEPS PER ITER >  1")
             for _ in tf.range(num_steps_per_iteration - 1):
               _sample_and_train(strategy, train_step_fn, data_iterator)
 
-          return _sample_and_train(strategy, train_step_fn, data_iterator)
+          return_val = _sample_and_train(strategy, train_step_fn, data_iterator)
+          tf.print("Inside dist train step time", tf.timestamp() - start_time)
+          return return_val
 
         train_input_iter = iter(train_input)
 
