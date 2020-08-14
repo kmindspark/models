@@ -466,7 +466,9 @@ def create_target_assigner(reference, stage=None,
 
   elif reference == 'DETR':
     similarity_calc = sim_calc.IouAndClassSimilarity()
-    matcher = hungarian_matcher.HungarianBipartiteMatcher()
+    matcher = argmax_matcher.ArgMaxMatcher(matched_threshold=0.5,
+                                           negatives_lower_than_unmatched=True,
+                                           use_matmul_gather=use_matmul_gather)
     box_coder_instance = detr_box_coder.DETRBoxCoder()
 
   else:
