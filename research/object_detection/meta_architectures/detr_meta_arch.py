@@ -19,8 +19,6 @@ from object_detection.core import losses
 from object_detection.utils import variables_helper
 
 from object_detection.meta_architectures import detr_lib
-#from object_detection.meta_architectures import detr_lib_revert
-#from object_detection.meta_architectures import detr_transformer
 from object_detection.matchers import hungarian_matcher
 from object_detection.core import post_processing
 import time
@@ -101,8 +99,8 @@ class DETRMetaArch(model.DetectionModel):
             [self.num_queries, self.hidden_dimension]),
             name="object_queries",
             dtype=tf.float32)
-    self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
-    self._localization_loss_iou = losses.WeightedGIOULocalizationLoss()
+    self._l1_localization_loss = losses.WeightedSmoothL1LocalizationLoss()
+    self._giou_localization_loss = losses.WeightedGIOULocalizationLoss()
     self._classification_loss = losses.WeightedSoftmaxClassificationLoss()
     self._giou_loss_weight = giou_loss_weight
     self._l1_loss_weight = l1_loss_weight
@@ -118,7 +116,6 @@ class DETRMetaArch(model.DetectionModel):
     self.is_training = is_training
 
   def predict(self, preprocessed_inputs, true_image_shapes, **side_inputs):
-    start_time = tf.timestamp()
     image_shape = tf.shape(preprocessed_inputs)
     
     x = self.first_stage(preprocessed_inputs, training=self.is_training)
@@ -129,18 +126,11 @@ class DETRMetaArch(model.DetectionModel):
                                        axis=0)], training=self.is_training)
     bboxes_encoded, logits = self._box_ffn(x), self.cls(x)
 
-    if (False):
-      fake_logits = np.zeros((x.shape[0], 100, self.num_classes + 1))
-      fake_logits[:,:,1] = 1000
-      logits = tf.convert_to_tensor(fake_logits, dtype=tf.float32)
-
     reshaped_bboxes = tf.reshape(
         bboxes_encoded, [bboxes_encoded.shape[0] * bboxes_encoded.shape[1],
         1, bboxes_encoded.shape[2]])
     batches_queries = tf.repeat(tf.expand_dims(self.num_queries,
         0), x.shape[0], axis=0)
-
-    tf.print("Done with inference:", tf.timestamp() - start_time)
 
     return {
       "refined_box_encodings": reshaped_bboxes,
@@ -235,12 +225,10 @@ class DETRMetaArch(model.DetectionModel):
       scope: Optional scope name.
 
     Returns:
-      a dictionary mapping loss keys (`first_stage_localization_loss`,
-        `first_stage_objectness_loss`, 'second_stage_localization_loss',
-        'second_stage_classification_loss') to scalar tensors representing
+      a dictionary mapping loss keys ('localization_loss',
+        'classification_loss') to scalar tensors representing
         corresponding loss values.
     """
-    start_time = tf.timestamp()
     with tf.name_scope(scope, 'Loss', prediction_dict.values()):
       (groundtruth_boxlists, groundtruth_classes_with_background_list,
        groundtruth_weights_list) = self._format_groundtruth_data(
@@ -249,31 +237,24 @@ class DETRMetaArch(model.DetectionModel):
             prediction_dict['refined_box_encodings'],
             prediction_dict['class_predictions_with_background'],
             prediction_dict['proposal_boxes'],
-            prediction_dict['num_proposals'], groundtruth_boxlists,
+            groundtruth_boxlists,
             groundtruth_classes_with_background_list,
-            groundtruth_weights_list, prediction_dict['image_shape'],
-            prediction_dict.get(
-                fields.DetectionResultFields.detection_boxes),
-            prediction_dict.get(
-                fields.DetectionResultFields.num_detections))
-    tf.print("Loss time:", tf.timestamp() - start_time)
+            groundtruth_weights_list,
+            prediction_dict['image_shape'])
     return loss_dict
 
   def _loss_box_classifier(self,
                            refined_box_encodings,
                            class_predictions_with_background,
                            proposal_boxes,
-                           num_proposals,
                            groundtruth_boxlists,
                            groundtruth_classes_with_background_list,
                            groundtruth_weights_list,
-                           image_shape,
-                           detection_boxes=None,
-                           num_detections=None):
+                           image_shape):
     """Computes scalar box classifier loss tensors.
 
     Uses self._detector_target_assigner to obtain regression and classification
-    targets for the second stage box classifier, optionally performs
+    targets for the box classifier, optionally performs
     hard mining, and returns losses.  All losses are computed independently
     for each image and then averaged across the batch.
 
@@ -293,9 +274,6 @@ class DETRMetaArch(model.DetectionModel):
         *includes* background class predictions (at class index 0).
       proposal_boxes: [batch_size, self.num_queries, 4] representing
         decoded proposal bounding boxes.
-      num_proposals: A Tensor of type `int32`. A 1-D tensor of shape [batch]
-        representing the number of proposals predicted for each image in
-        the batch.
       groundtruth_boxlists: a list of BoxLists containing coordinates of the
         groundtruth boxes.
       groundtruth_classes_with_background_list: a list of 2-D one-hot
@@ -304,126 +282,67 @@ class DETRMetaArch(model.DetectionModel):
       groundtruth_weights_list: A list of 1-D tf.float32 tensors of shape
         [num_boxes] containing weights for groundtruth boxes.
       image_shape: a 1-D tensor of shape [4] representing the image shape.
-      detection_boxes: 3-D float tensor of shape [batch,
-        max_total_detections, 4] containing post-processed detection boxes in
-        normalized co-ordinates.
-      num_detections: 1-D int32 tensor of shape [batch] containing number of
-        valid detections in `detection_boxes`.
 
     Returns:
-      a dictionary mapping loss keys ('second_stage_localization_loss',
-        'second_stage_classification_loss') to scalar tensors representing
+      a dictionary mapping loss keys ('localization_loss',
+        'classification_loss') to scalar tensors representing
         corresponding loss values.
-    """
-    with tf.name_scope('BoxClassifierLoss'):
-      paddings_indicator = self._padded_batched_proposals_indicator(
-          num_proposals, proposal_boxes.shape[1])
-      proposal_boxlists = [
-          box_list.BoxList(proposal_boxes_single_image)
-          for proposal_boxes_single_image in tf.unstack(proposal_boxes)]
-      batch_size = len(proposal_boxlists)
+  """
+    proposal_boxlists = [
+        box_list.BoxList(proposal_boxes_single_image)
+        for proposal_boxes_single_image in tf.unstack(proposal_boxes)]
+    batch_size = len(proposal_boxlists)
 
-      num_proposals_or_one = tf.cast(tf.expand_dims(
-          tf.maximum(num_proposals, tf.ones_like(num_proposals)), 1),
-                                     dtype=tf.float32)
-      normalizer = tf.tile(num_proposals_or_one,
-                           [1, self.num_queries]) * batch_size
+    (batch_cls_targets_with_background, batch_cls_weights, batch_reg_targets,
+      batch_reg_weights, _) = target_assigner.batch_assign_targets(
+          target_assigner=self.target_assigner,
+          anchors_batch=proposal_boxlists,
+          gt_box_batch=groundtruth_boxlists,
+          gt_class_targets_batch=groundtruth_classes_with_background_list,
+          unmatched_class_label=tf.constant(
+              [1] + self._num_classes * [0], dtype=tf.float32),
+          gt_weights_batch=groundtruth_weights_list,
+          class_predictions=class_predictions_with_background)
 
-      (batch_cls_targets_with_background, batch_cls_weights, batch_reg_targets,
-       batch_reg_weights, _) = target_assigner.batch_assign_targets(
-           target_assigner=self.target_assigner,
-           anchors_batch=proposal_boxlists,
-           gt_box_batch=groundtruth_boxlists,
-           gt_class_targets_batch=groundtruth_classes_with_background_list,
-           unmatched_class_label=tf.constant(
-               [1] + self._num_classes * [0], dtype=tf.float32),
-           gt_weights_batch=groundtruth_weights_list,
-           class_predictions=class_predictions_with_background)
+    # Ensure data are of the correct shape
+    class_predictions_with_background = tf.reshape(
+        class_predictions_with_background,
+        [batch_size, self.num_queries, -1])
+    reshaped_refined_box_encodings = tf.reshape(
+        refined_box_encodings,
+        [batch_size, self.num_queries, 4])
 
-      class_predictions_with_background = tf.reshape(
-          class_predictions_with_background,
-          [batch_size, self.num_queries, -1])
+    losses_mask = None
+    if self.groundtruth_has_field(fields.InputDataFields.is_annotated):
+      losses_mask = tf.stack(self.groundtruth_lists(
+          fields.InputDataFields.is_annotated))
 
-      flat_cls_targets_with_background = tf.reshape(
-          batch_cls_targets_with_background,
-          [batch_size * self.num_queries, -1])
-      one_hot_flat_cls_targets_with_background = tf.argmax(
-          flat_cls_targets_with_background, axis=1)
-      one_hot_flat_cls_targets_with_background = tf.one_hot(
-          one_hot_flat_cls_targets_with_background,
-          flat_cls_targets_with_background.get_shape()[1])
+    l1_loc_loss = tf.reduce_sum(self._l1_localization_loss(
+        reshaped_refined_box_encodings,
+        batch_reg_targets,
+        weights=batch_reg_weights,
+        losses_mask=losses_mask)) * self._l1_loss_weight / batch_size
 
-      # If using a shared box across classes use directly
-      reshaped_refined_box_encodings = tf.reshape(
-          refined_box_encodings,
-          [batch_size, self.num_queries, self._box_coder.code_size])
+    giou_loc_loss = tf.reduce_sum(self._giou_localization_loss(
+        ops.center_to_corner_coordinate(reshaped_refined_box_encodings),
+        ops.center_to_corner_coordinate(batch_reg_targets),
+        weights=batch_reg_weights,
+        losses_mask=losses_mask)) * self._giou_loss_weight / batch_size
 
-      losses_mask = None
-      if self.groundtruth_has_field(fields.InputDataFields.is_annotated):
-        losses_mask = tf.stack(self.groundtruth_lists(
-            fields.InputDataFields.is_annotated))
+    # Down-weight background class loss by 10 to account for imbalance
+    batch_cls_weights = tf.concat([tf.expand_dims(
+        batch_cls_weights[:, :, 0] / 10, axis=2),
+        batch_cls_weights[:, :, 1:]], axis=-1)
 
-      print("LOSS: encodings and targets")
-      print(reshaped_refined_box_encodings)
-      print(batch_reg_targets)
-      print(class_predictions_with_background)
-      print(batch_cls_targets_with_background)
-      second_stage_loc_losses = 5 * self._localization_loss(
-          reshaped_refined_box_encodings,
-          batch_reg_targets,
-          weights=batch_reg_weights,
-          losses_mask=losses_mask) / normalizer
+    cls_loss = tf.reduce_sum(self._classification_loss(
+        class_predictions_with_background,
+        batch_cls_targets_with_background,
+        weights=batch_cls_weights,
+        losses_mask=losses_mask)) * self._cls_loss_weight / batch_size
 
-      def convert_to_minmaxcoords(input_tensor):
-        reshaped_encodings = tf.reshape(input_tensor, [-1, 4])
-        ycenter = tf.gather(reshaped_encodings, [0], axis=1)
-        xcenter = tf.gather(reshaped_encodings, [1], axis=1)
-        h = tf.gather(reshaped_encodings, [2], axis=1)
-        w = tf.gather(reshaped_encodings, [3], axis=1)
-        ymin = ycenter - h / 2.
-        xmin = xcenter - w / 2.
-        ymax = ycenter + h / 2.
-        xmax = xcenter + w / 2.
-        #print("RESULT", tf.stack([ymin, xmin, ymax, xmax], axis=1))
-        return tf.squeeze(tf.stack([ymin, xmin, ymax, xmax], axis=1))
+    loss_dict = {'Loss/localization_loss': l1_loc_loss + giou_loc_loss,
+                 'Loss/classification_loss': cls_loss}
 
-      my_loc_loss = self._localization_loss_iou(
-          convert_to_minmaxcoords(tf.reshape(reshaped_refined_box_encodings, [-1, 4])),
-          convert_to_minmaxcoords(tf.reshape(batch_reg_targets, [-1, 4])),
-          weights=batch_reg_weights,
-          losses_mask=losses_mask)
-      my_loc_loss = tf.reshape(my_loc_loss, shape=[reshaped_refined_box_encodings.shape[0], reshaped_refined_box_encodings.shape[1]])
-      second_stage_loc_losses += 2 * my_loc_loss/normalizer
-
-      batch_cls_weights = tf.concat([tf.expand_dims(batch_cls_weights[:, :, 0] / 10, axis=2), batch_cls_weights[:, :, 1:]], axis=-1)
-
-      second_stage_cls_losses = ops.reduce_sum_trailing_dimensions(
-          self._classification_loss(
-              class_predictions_with_background,
-              batch_cls_targets_with_background,
-              weights=batch_cls_weights,
-              losses_mask=losses_mask),
-          ndims=2) / normalizer
-
-      second_stage_loc_loss = tf.reduce_sum(
-          second_stage_loc_losses * tf.cast(paddings_indicator,
-                                            dtype=tf.float32))
-      second_stage_cls_loss = tf.reduce_sum(
-          second_stage_cls_losses * tf.cast(paddings_indicator,
-                                            dtype=tf.float32))
-
-      localization_loss = tf.multiply(1.0,
-                                      second_stage_loc_loss,
-                                      name='localization_loss')
-
-      classification_loss = tf.multiply(1.0,
-                                        second_stage_cls_loss,
-                                        name='classification_loss')
-
-      loss_dict = {'Loss/BoxClassifierLoss/localization_loss':
-                       localization_loss,
-                   'Loss/BoxClassifierLoss/classification_loss':
-                       classification_loss}
     return loss_dict
 
   def updates(self):
@@ -440,9 +359,6 @@ class DETRMetaArch(model.DetectionModel):
 
   def regularization_losses(self):
     return []
-    #all_losses = []
-    #if self.first_stage:
-    #  all_losses.extend(self.first_stage.losses)
 
   def postprocess(self, prediction_dict, true_image_shapes):
     """Convert prediction tensors to final detections.
@@ -477,7 +393,7 @@ class DETRMetaArch(model.DetectionModel):
       ValueError: If `_output_final_box_features` is true but
         rpn_features_to_crop is not in the prediction_dict.
     """
-    with tf.name_scope('SecondStagePostprocessor'):
+    with tf.name_scope('Postprocessor'):
       detections_dict = self._postprocess_box_classifier(
           prediction_dict['refined_box_encodings'],
           prediction_dict['class_predictions_with_background'],
@@ -487,6 +403,107 @@ class DETRMetaArch(model.DetectionModel):
           orig_image_shapes=prediction_dict['image_shape'])
 
     return detections_dict
+
+  def _postprocess_box_classifier(self,
+                                  refined_box_encodings,
+                                  class_predictions_with_background,
+                                  proposal_boxes,
+                                  num_proposals,
+                                  image_shapes,
+                                  orig_image_shapes=None):
+    """Converts predictions from the box classifier to detections.
+
+    Args:
+      refined_box_encodings: a 3-D float tensor with shape
+        [total_num_padded_proposals, num_classes, self._box_coder.code_size]
+        representing predicted (final) refined box encodings. If using a shared
+        box across classes the shape will instead be
+        [total_num_padded_proposals, 1, 4]
+      class_predictions_with_background: a 2-D tensor float with shape
+        [total_num_padded_proposals, num_classes + 1] containing class
+        predictions (logits) for each of the proposals.  Note that this tensor
+        *includes* background class predictions (at class index 0).
+      proposal_boxes: a 3-D float tensor with shape
+        [batch_size, self.num_queries, 4] representing decoded proposal
+        bounding boxes in absolute coordinates.
+      num_proposals: a 1-D int32 tensor of shape [batch] representing the number
+        of proposals predicted for each image in the batch.
+      image_shapes: a 2-D int32 tensor containing shapes of input image in the
+        batch.
+
+    Returns:
+      A dictionary containing:
+        `detection_boxes`: [batch, max_detection, 4] in normalized co-ordinates.
+        `detection_scores`: [batch, max_detections]
+        `detection_multiclass_scores`: [batch, max_detections,
+          num_classes_with_background] tensor with class score distribution for
+          post-processed detection boxes including background class if any.
+        `detection_anchor_indices`: [batch, max_detections] with anchor
+          indices.
+        `detection_classes`: [batch, max_detections]
+        `num_detections`: [batch]
+        `raw_detection_boxes`: [batch, total_detections, 4] tensor with decoded
+          detection boxes in normalized coordinates, before Non-Max Suppression.
+          The value total_detections is the number of anchors
+          (i.e. the total number of boxes before NMS).
+        `raw_detection_scores`: [batch, total_detections,
+          num_classes_with_background] tensor of multi-class scores for
+          raw detection boxes. The value total_detections is the number of
+          anchors (i.e. the total number of boxes before NMS).
+    """
+    clip_window = self._compute_clip_window(image_shapes)
+    refined_box_encodings_batch = tf.reshape(
+        refined_box_encodings,
+        [-1, self.num_queries, 4])
+    class_predictions_with_background_batch = tf.reshape(
+        class_predictions_with_background,
+        [-1, self.num_queries, self.num_classes + 1]
+    )
+    batch_size = shape_utils.combined_static_and_dynamic_shape(
+        refined_box_encodings_batch)[0]
+    refined_decoded_boxes_batch = ops.center_to_corner_coordinate(tf.reshape(refined_box_encodings_batch, [-1, 4]))
+    refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(refined_decoded_boxes_batch, image_shape=orig_image_shapes, temp=True)
+    class_predictions_with_background_batch_normalized = self._score_conversion_fn(class_predictions_with_background_batch) 
+    class_predictions_batch = tf.reshape(class_predictions_with_background_batch_normalized, [-1, self.num_queries, self.num_classes + 1])
+
+    batch_anchor_indices = tf.tile(
+        tf.expand_dims(tf.range(self.num_queries), 0),
+        multiples=[batch_size, 1])
+    additional_fields = {
+        'multiclass_scores': tf.slice(class_predictions_with_background_batch_normalized,
+                 [0, 0, 1], [-1, -1, -1])
+    }
+
+    nmsed_boxes = refined_decoded_boxes_batch
+    nmsed_classes = tf.argmax(class_predictions_batch, axis=2)
+    nmsed_scores = tf.math.reduce_max(class_predictions_batch, axis=2)
+
+    non_background_mask = tf.cast(tf.greater_equal(nmsed_classes, 1), tf.float32)
+    nmsed_boxes = tf.multiply(tf.repeat(tf.expand_dims(non_background_mask, axis=2), axis=2, repeats=4), nmsed_boxes)
+    nmsed_classes = tf.cast(nmsed_classes, dtype=tf.float32) - tf.cast(tf.ones_like(nmsed_classes), dtype=tf.float32)# tf.multiply(, non_background_mask)
+    nmsed_scores = tf.multiply(nmsed_scores, non_background_mask)
+
+    nmsed_boxes = shape_utils.static_or_dynamic_map_fn(self._clip_window_prune_boxes, [nmsed_boxes, clip_window])
+
+    detections = {
+        fields.DetectionResultFields.detection_boxes:
+            nmsed_boxes,
+        fields.DetectionResultFields.detection_scores:
+            nmsed_scores,
+        fields.DetectionResultFields.detection_classes:
+            nmsed_classes,
+        fields.DetectionResultFields.detection_multiclass_scores:
+            additional_fields['multiclass_scores'],
+        fields.DetectionResultFields.detection_anchor_indices:
+            batch_anchor_indices,
+        fields.DetectionResultFields.num_detections:
+            tf.cast(tf.count_nonzero(nmsed_scores), dtype=tf.float32),
+        fields.DetectionResultFields.raw_detection_boxes:
+            refined_box_encodings_batch,
+        fields.DetectionResultFields.raw_detection_scores:
+            class_predictions_with_background_batch_normalized
+    }
+    return detections
 
 ################################## UTILITY FUNCTIONS ########################################
 
@@ -556,159 +573,6 @@ class DETRMetaArch(model.DetectionModel):
     """
     return tf.tile(tf.expand_dims(image_batch_shape_1d[1:], 0),
                     [image_batch_shape_1d[0], 1])
-
-  def _padded_batched_proposals_indicator(self,
-                                          num_proposals,
-                                          max_num_proposals):
-    """Creates indicator matrix of non-pad elements of padded batch proposals.
-
-    Args:
-      num_proposals: Tensor of type tf.int32 with shape [batch_size].
-      max_num_proposals: Maximum number of proposals per image (integer).
-
-    Returns:
-      A Tensor of type tf.bool with shape [batch_size, max_num_proposals].
-    """
-    batch_size = tf.size(num_proposals)
-    tiled_num_proposals = tf.tile(
-        tf.expand_dims(num_proposals, 1), [1, max_num_proposals])
-    tiled_proposal_index = tf.tile(
-        tf.expand_dims(tf.range(max_num_proposals), 0), [batch_size, 1])
-    return tf.greater(tiled_num_proposals, tiled_proposal_index)
-
-  def _get_refined_encodings_for_postitive_class(
-      self, refined_box_encodings, flat_cls_targets_with_background,
-      batch_size):
-    # We only predict refined location encodings for the non background
-    # classes, but we now pad it to make it compatible with the class
-    # predictions
-    refined_box_encodings_with_background = tf.pad(refined_box_encodings,
-                                                    [[0, 0], [1, 0], [0, 0]])
-    refined_box_encodings_masked_by_class_targets = (
-        box_list_ops.boolean_mask(
-            box_list.BoxList(
-                tf.reshape(refined_box_encodings_with_background,
-                            [-1, self._box_coder.code_size])),
-            tf.reshape(tf.greater(flat_cls_targets_with_background, 0), [-1]),
-            use_static_shapes=self._use_static_shapes,
-            indicator_sum=batch_size * self.num_queries
-            if self._use_static_shapes else None).get())
-    return tf.reshape(
-        refined_box_encodings_masked_by_class_targets, [
-            batch_size, self.num_queries,
-            self._box_coder.code_size
-        ])
-
-  def _postprocess_box_classifier(self,
-                                  refined_box_encodings,
-                                  class_predictions_with_background,
-                                  proposal_boxes,
-                                  num_proposals,
-                                  image_shapes,
-                                  orig_image_shapes=None):
-    """Converts predictions from the second stage box classifier to detections.
-
-    Args:
-      refined_box_encodings: a 3-D float tensor with shape
-        [total_num_padded_proposals, num_classes, self._box_coder.code_size]
-        representing predicted (final) refined box encodings. If using a shared
-        box across classes the shape will instead be
-        [total_num_padded_proposals, 1, 4]
-      class_predictions_with_background: a 2-D tensor float with shape
-        [total_num_padded_proposals, num_classes + 1] containing class
-        predictions (logits) for each of the proposals.  Note that this tensor
-        *includes* background class predictions (at class index 0).
-      proposal_boxes: a 3-D float tensor with shape
-        [batch_size, self.num_queries, 4] representing decoded proposal
-        bounding boxes in absolute coordinates.
-      num_proposals: a 1-D int32 tensor of shape [batch] representing the number
-        of proposals predicted for each image in the batch.
-      image_shapes: a 2-D int32 tensor containing shapes of input image in the
-        batch.
-
-    Returns:
-      A dictionary containing:
-        `detection_boxes`: [batch, max_detection, 4] in normalized co-ordinates.
-        `detection_scores`: [batch, max_detections]
-        `detection_multiclass_scores`: [batch, max_detections,
-          num_classes_with_background] tensor with class score distribution for
-          post-processed detection boxes including background class if any.
-        `detection_anchor_indices`: [batch, max_detections] with anchor
-          indices.
-        `detection_classes`: [batch, max_detections]
-        `num_detections`: [batch]
-        `raw_detection_boxes`: [batch, total_detections, 4] tensor with decoded
-          detection boxes in normalized coordinates, before Non-Max Suppression.
-          The value total_detections is the number of second stage anchors
-          (i.e. the total number of boxes before NMS).
-        `raw_detection_scores`: [batch, total_detections,
-          num_classes_with_background] tensor of multi-class scores for
-          raw detection boxes. The value total_detections is the number of
-          second stage anchors (i.e. the total number of boxes before NMS).
-    """
-    clip_window = self._compute_clip_window(image_shapes)
-    refined_box_encodings_batch = tf.reshape(
-        refined_box_encodings,
-        [-1,
-        self.num_queries,
-        self._box_coder.code_size])
-    class_predictions_with_background_batch = tf.reshape(
-        class_predictions_with_background,
-        [-1, self.num_queries, self.num_classes + 1]
-    )
-    refined_decoded_boxes_batch = tf.squeeze(self._batch_decode_boxes(
-        tf.expand_dims(refined_box_encodings_batch, axis=2), proposal_boxes), axis=2)
-    refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(refined_decoded_boxes_batch, image_shape=orig_image_shapes, temp=True)
-    class_predictions_with_background_batch_normalized = self._score_conversion_fn(class_predictions_with_background_batch) 
-    class_predictions_batch = tf.reshape(class_predictions_with_background_batch_normalized, [-1, self.num_queries, self.num_classes + 1])
-
-    batch_size = shape_utils.combined_static_and_dynamic_shape(
-        refined_box_encodings_batch)[0]
-    batch_anchor_indices = tf.tile(
-        tf.expand_dims(tf.range(self.num_queries), 0),
-        multiples=[batch_size, 1])
-    additional_fields = {
-        'multiclass_scores': tf.slice(class_predictions_with_background_batch_normalized,
-                 [0, 0, 1], [-1, -1, -1])
-    }
-
-    nmsed_boxes = refined_decoded_boxes_batch
-    nmsed_classes = tf.argmax(class_predictions_batch, axis=2)
-    nmsed_scores = tf.math.reduce_max(class_predictions_batch, axis=2)
-
-    non_background_mask = tf.cast(tf.greater_equal(nmsed_classes, 1), tf.float32)
-    nmsed_boxes = tf.multiply(tf.repeat(tf.expand_dims(non_background_mask, axis=2), axis=2, repeats=4), nmsed_boxes)
-    nmsed_classes = tf.cast(nmsed_classes, dtype=tf.float32) - tf.cast(tf.ones_like(nmsed_classes), dtype=tf.float32)# tf.multiply(, non_background_mask)
-    nmsed_scores = tf.multiply(nmsed_scores, non_background_mask)
-
-    print("NMSED")
-    print(nmsed_boxes)
-    print(nmsed_classes)
-    print(nmsed_scores)
-
-    nmsed_boxes = shape_utils.static_or_dynamic_map_fn(self._clip_window_prune_boxes, [nmsed_boxes, clip_window])
-
-    print("AFTER MAP", nmsed_boxes)
-
-    detections = {
-        fields.DetectionResultFields.detection_boxes:
-            nmsed_boxes,
-        fields.DetectionResultFields.detection_scores:
-            nmsed_scores,
-        fields.DetectionResultFields.detection_classes:
-            nmsed_classes,
-        fields.DetectionResultFields.detection_multiclass_scores:
-            additional_fields['multiclass_scores'],
-        fields.DetectionResultFields.detection_anchor_indices:
-            batch_anchor_indices,
-        fields.DetectionResultFields.num_detections:
-            tf.cast(tf.count_nonzero(nmsed_scores), dtype=tf.float32),
-        fields.DetectionResultFields.raw_detection_boxes:
-            refined_box_encodings_batch,
-        fields.DetectionResultFields.raw_detection_scores:
-            class_predictions_with_background_batch_normalized
-    }
-    return detections
 
   def _batch_decode_boxes(self, box_encodings, anchor_boxes):
     """Decodes box encodings with respect to the anchor boxes.
