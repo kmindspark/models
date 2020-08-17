@@ -65,6 +65,11 @@ flags.DEFINE_integer(
     'num_workers', 1, 'When num_workers > 1, training uses '
     'MultiWorkerMirroredStrategy. When num_workers = 1 it uses '
     'MirroredStrategy.')
+flags.DEFINE_integer(
+    'checkpoint_every_n', 1000, 'Integer defining how often we checkpoint.')
+flags.DEFINE_boolean('record_summaries', True,
+                     ('Whether or not to record summaries during'
+                      ' training.'))
 
 FLAGS = flags.FLAGS
 
@@ -104,7 +109,8 @@ def main(unused_argv):
           model_dir=FLAGS.model_dir,
           train_steps=FLAGS.num_train_steps,
           use_tpu=FLAGS.use_tpu,
-          checkpoint_every_n=100)
+          checkpoint_every_n=FLAGS.checkpoint_every_n,
+          record_summaries=FLAGS.record_summaries)
 
 if __name__ == '__main__':
   tf.compat.v1.app.run()
