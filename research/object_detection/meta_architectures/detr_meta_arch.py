@@ -90,7 +90,7 @@ class DETRMetaArch(model.DetectionModel):
                              "num_heads": 8,
                              "layer_postprocess_dropout": 0.1,
                              "dtype": tf.float32, 
-                             "num_hidden_layers": 6,
+                             "num_hidden_layers": 3,
                              "filter_size": 2048,
                              "relu_dropout": 0.0}
     self.transformer = detr_lib.Transformer(**self.transformer_args)
