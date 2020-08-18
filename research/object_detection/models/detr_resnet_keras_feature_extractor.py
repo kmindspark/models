@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Resnet based Faster R-CNN implementation in Keras.
+"""Resnet based DETR implementation in Keras.
 
 See Deep Residual Learning for Image Recognition by He et al.
 https://arxiv.org/abs/1512.03385
@@ -33,33 +33,33 @@ _RESNET_MODEL_CONV5_LAST_LAYERS = {
 
 class DETRResnetKerasFeatureExtractor(
     detr_meta_arch.DETRKerasFeatureExtractor):
-  """Faster R-CNN with Resnet feature extractor implementation."""
+  """DETR with Resnet feature extractor implementation."""
 
   def __init__(self,
                is_training,
                resnet_v1_base_model,
                resnet_v1_base_model_name,
-               first_stage_features_stride=32,
+               features_stride=32,
                batch_norm_trainable=False,
                weight_decay=0.0):
     """Constructor.
 
     Args:
       is_training: See base class.
-      resnet_v1_base_model: base resnet v1 network to use. One of
-        the resnet_v1.resnet_v1_{50,101,152} models.
+      resnet_v1_base_model: base resnet v1 network to use. Only
+        the resnet_v1.resnet_v1_{50} is supported currently.
       resnet_v1_base_model_name: model name under which to construct resnet v1.
-      first_stage_features_stride: See base class.
+      features_stride: See base class.
       batch_norm_trainable: See base class.
       weight_decay: See base class.
 
     Raises:
-      ValueError: If `first_stage_features_stride` is not 8 or 16.
+      ValueError: If `features_stride` is not 32.
     """
-    if first_stage_features_stride != 32:
-      raise ValueError('`first_stage_features_stride` must be 16.')
+    if features_stride != 32:
+      raise ValueError('`features_stride` must be 32.')
     super(DETRResnetKerasFeatureExtractor, self).__init__(
-        is_training, first_stage_features_stride, batch_norm_trainable,
+        is_training, features_stride, batch_norm_trainable,
         weight_decay)
     self.classification_backbone = None
     self._variable_dict = {}
@@ -67,7 +67,7 @@ class DETRResnetKerasFeatureExtractor(
     self._resnet_v1_base_model_name = resnet_v1_base_model_name
 
   def preprocess(self, resized_inputs):
-    """Faster R-CNN Resnet V1 preprocessing.
+    """DETR Resnet V1 preprocessing.
 
 
     VGG style channel mean subtraction as described here:
@@ -117,11 +117,10 @@ class DETRResnetKerasFeatureExtractor(
           )
     with tf.name_scope(name):
       with tf.name_scope('ResnetV1'):
-
-        conv4_last_layer = _RESNET_MODEL_CONV5_LAST_LAYERS[
+        conv5_last_layer = _RESNET_MODEL_CONV5_LAST_LAYERS[
             self._resnet_v1_base_model_name]
         proposal_features = self.classification_backbone.get_layer(
-            name=conv4_last_layer).output
+            name=conv5_last_layer).output
         keras_model = tf.keras.Model(
             inputs=self.classification_backbone.inputs,
             outputs=proposal_features)
@@ -129,66 +128,20 @@ class DETRResnetKerasFeatureExtractor(
           self._variable_dict[variable.name[:-2]] = variable
         return keras_model
 
-  def get_box_classifier_feature_extractor_model(self, name=None):
-    """Returns a model that extracts second stage box classifier features.
-
-    This function reconstructs the "second half" of the ResNet v1
-    network after the part defined in `get_proposal_feature_extractor_model`.
-
-    Args:
-      name: A scope name to construct all variables within.
-
-    Returns:
-      A Keras model that takes proposal_feature_maps:
-        A 4-D float tensor with shape
-        [batch_size * self.max_num_proposals, crop_height, crop_width, depth]
-        representing the feature map cropped to each proposal.
-      And returns proposal_classifier_features:
-        A 4-D float tensor with shape
-        [batch_size * self.max_num_proposals, height, width, depth]
-        representing box classifier features for each proposal.
-    """
-    if not self.classification_backbone:
-      self.classification_backbone = self._resnet_v1_base_model(
-          batchnorm_training=self._train_batch_norm,
-          conv_hyperparams=None,
-          weight_decay=self._weight_decay,
-          classes=None,
-          weights=None,
-          include_top=False
-          )
-    with tf.name_scope(name):
-      with tf.name_scope('ResnetV1'):
-        conv4_last_layer = _RESNET_MODEL_CONV5_LAST_LAYERS[
-            self._resnet_v1_base_model_name]
-        proposal_feature_maps = self.classification_backbone.get_layer(
-            name=conv4_last_layer).output
-        proposal_classifier_features = self.classification_backbone.get_layer(
-            name='conv5_block3_out').output
-
-        keras_model = model_util.extract_submodel(
-            model=self.classification_backbone,
-            inputs=proposal_feature_maps,
-            outputs=proposal_classifier_features)
-        for variable in keras_model.variables:
-          self._variable_dict[variable.name[:-2]] = variable
-        return keras_model
-
-
 class DETRResnet50KerasFeatureExtractor(
     DETRResnetKerasFeatureExtractor):
-  """Faster R-CNN with Resnet50 feature extractor implementation."""
+  """DETR with Resnet50 feature extractor implementation."""
 
   def __init__(self,
                is_training,
-               first_stage_features_stride=16,
+               features_stride=32,
                batch_norm_trainable=False,
                weight_decay=0.0):
     """Constructor.
 
     Args:
       is_training: See base class.
-      first_stage_features_stride: See base class.
+      features_stride: See base class.
       batch_norm_trainable: See base class.
       weight_decay: See base class.
     """
@@ -196,25 +149,28 @@ class DETRResnet50KerasFeatureExtractor(
         is_training=is_training,
         resnet_v1_base_model=resnet_v1.resnet_v1_50,
         resnet_v1_base_model_name='resnet_v1_50',
-        first_stage_features_stride=first_stage_features_stride,
+        features_stride=features_stride,
         batch_norm_trainable=batch_norm_trainable,
         weight_decay=weight_decay)
 
 
 class DETRResnet101KerasFeatureExtractor(
     DETRResnetKerasFeatureExtractor):
-  """Faster R-CNN with Resnet101 feature extractor implementation."""
+  """DETR with Resnet101 feature extractor implementation."
+  
+  Currently unsupported.
+  """
 
   def __init__(self,
                is_training,
-               first_stage_features_stride=16,
+               features_stride=32,
                batch_norm_trainable=False,
                weight_decay=0.0):
     """Constructor.
 
     Args:
       is_training: See base class.
-      first_stage_features_stride: See base class.
+      features_stride: See base class.
       batch_norm_trainable: See base class.
       weight_decay: See base class.
     """
@@ -222,25 +178,28 @@ class DETRResnet101KerasFeatureExtractor(
         is_training=is_training,
         resnet_v1_base_model=resnet_v1.resnet_v1_101,
         resnet_v1_base_model_name='resnet_v1_101',
-        first_stage_features_stride=first_stage_features_stride,
+        features_stride=features_stride,
         batch_norm_trainable=batch_norm_trainable,
         weight_decay=weight_decay)
 
 
 class DETRResnet152KerasFeatureExtractor(
     DETRResnetKerasFeatureExtractor):
-  """Faster R-CNN with Resnet152 feature extractor implementation."""
+  """DETR with Resnet152 feature extractor implementation.
+  
+  Currently unsupported.
+  """
 
   def __init__(self,
                is_training,
-               first_stage_features_stride=16,
+               features_stride=32,
                batch_norm_trainable=False,
                weight_decay=0.0):
     """Constructor.
 
     Args:
       is_training: See base class.
-      first_stage_features_stride: See base class.
+      features_stride: See base class.
       batch_norm_trainable: See base class.
       weight_decay: See base class.
     """
@@ -248,6 +207,6 @@ class DETRResnet152KerasFeatureExtractor(
         is_training=is_training,
         resnet_v1_base_model=resnet_v1.resnet_v1_152,
         resnet_v1_base_model_name='resnet_v1_152',
-        first_stage_features_stride=first_stage_features_stride,
+        first_stage_features_stride=features_stride,
         batch_norm_trainable=batch_norm_trainable,
         weight_decay=weight_decay)
