@@ -315,11 +315,24 @@ class DETRMetaArch(model.DetectionModel):
         'second_stage_classification_loss') to scalar tensors representing
         corresponding loss values.
     """
+    def convert_to_minmaxcoords(input_tensor):
+        reshaped_encodings = tf.reshape(input_tensor, [-1, 4])
+        ycenter = tf.gather(reshaped_encodings, [0], axis=1)
+        xcenter = tf.gather(reshaped_encodings, [1], axis=1)
+        h = tf.gather(reshaped_encodings, [2], axis=1)
+        w = tf.gather(reshaped_encodings, [3], axis=1)
+        ymin = ycenter - h / 2.
+        xmin = xcenter - w / 2.
+        ymax = ycenter + h / 2.
+        xmax = xcenter + w / 2.
+        #print("RESULT", tf.stack([ymin, xmin, ymax, xmax], axis=1))
+        return tf.squeeze(tf.stack([ymin, xmin, ymax, xmax], axis=1))
+
     with tf.name_scope('BoxClassifierLoss'):
       paddings_indicator = self._padded_batched_proposals_indicator(
           num_proposals, proposal_boxes.shape[1])
       proposal_boxlists = [
-          box_list.BoxList(proposal_boxes_single_image)
+          box_list.BoxList(convert_to_minmaxcoords(proposal_boxes_single_image))
           for proposal_boxes_single_image in tf.unstack(proposal_boxes)]
       batch_size = len(proposal_boxlists)
 
@@ -373,19 +386,6 @@ class DETRMetaArch(model.DetectionModel):
           batch_reg_targets,
           weights=batch_reg_weights,
           losses_mask=losses_mask) / normalizer
-
-      def convert_to_minmaxcoords(input_tensor):
-        reshaped_encodings = tf.reshape(input_tensor, [-1, 4])
-        ycenter = tf.gather(reshaped_encodings, [0], axis=1)
-        xcenter = tf.gather(reshaped_encodings, [1], axis=1)
-        h = tf.gather(reshaped_encodings, [2], axis=1)
-        w = tf.gather(reshaped_encodings, [3], axis=1)
-        ymin = ycenter - h / 2.
-        xmin = xcenter - w / 2.
-        ymax = ycenter + h / 2.
-        xmax = xcenter + w / 2.
-        #print("RESULT", tf.stack([ymin, xmin, ymax, xmax], axis=1))
-        return tf.squeeze(tf.stack([ymin, xmin, ymax, xmax], axis=1))
 
       my_loc_loss = self._localization_loss_iou(
           convert_to_minmaxcoords(tf.reshape(reshaped_refined_box_encodings, [-1, 4])),
