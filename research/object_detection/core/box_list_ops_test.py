@@ -218,6 +218,7 @@ class BoxListOpsTest(test_case.TestCase):
   def test_iou(self):
     def graph_fn():
       corners1 = tf.constant([[4.0, 3.0, 7.0, 5.0], [5.0, 6.0, 10.0, 7.0]])
+      corners1 = tf.constant([[4.0, 3.0, 7.0, 5.0], [5.0, 6.0, 10.0, 7.0]])
       corners2 = tf.constant([[3.0, 4.0, 6.0, 8.0], [14.0, 14.0, 15.0, 15.0],
                               [0.0, 0.0, 20.0, 20.0]])
       boxes1 = box_list.BoxList(corners1)

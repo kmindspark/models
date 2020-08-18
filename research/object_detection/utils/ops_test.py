@@ -1630,7 +1630,14 @@ class TestGatherWithPaddingValues(test_case.TestCase):
     self.assertAllClose(expected_gathered_tensor, gathered_tensor_np)
 
 
+
+
+
+
+
+
 class TestGIoU(test_case.TestCase):
+
   def test_giou_with_no_overlap(self):
     expected_giou_tensor = [
         0, -1/3, -3/4, 0, -98/100
@@ -1640,7 +1647,7 @@ class TestGIoU(test_case.TestCase):
       boxes1 = tf.constant([[3, 4, 5, 6], [3, 3, 5, 5],
                             [0, 0, 0, 0], [3, 3, 5, 5],
                             [9, 9, 10, 10]],
-                            dtype=tf.float32)
+                           dtype=tf.float32)
       boxes2 = tf.constant([[3, 2, 5, 4], [3, 7, 5, 9],
                             [5, 5, 10, 10], [3, 5, 5, 7],
                             [0, 0, 1, 1]], dtype=tf.float32)
@@ -1661,7 +1668,7 @@ class TestGIoU(test_case.TestCase):
     def graph_fn():
       boxes1 = tf.constant([[2, 1, 7, 6], [2, 2, 4, 4],
                             [2, 2, 4, 4], [2, 2, 4, 4]],
-                            dtype=tf.float32)
+                           dtype=tf.float32)
       boxes2 = tf.constant([[4, 3, 5, 4], [3, 3, 4, 4],
                             [2, 3, 4, 5], [3, 3, 5, 5]], dtype=tf.float32)
 
@@ -1677,10 +1684,8 @@ class TestGIoU(test_case.TestCase):
     expected_giou_tensor = [1]
 
     def graph_fn():
-      boxes1 = tf.constant([[3, 3, 5, 5]],
-          dtype=tf.float32)
-      boxes2 = tf.constant([[3, 3, 5, 5]],
-          dtype=tf.float32)
+      boxes1 = tf.constant([[3, 3, 5, 5]], dtype=tf.float32)
+      boxes2 = tf.constant([[3, 3, 5, 5]], dtype=tf.float32)
 
       giou = ops.giou(boxes1, boxes2)
       self.assertEqual(giou.dtype, tf.float32)
@@ -1694,10 +1699,8 @@ class TestGIoU(test_case.TestCase):
     expected_giou_tensor = [0]
 
     def graph_fn():
-      boxes1 = tf.constant([[1, 1, 1, 1]],
-          dtype=tf.float32)
-      boxes2 = tf.constant([[1, 1, 1, 1]],
-          dtype=tf.float32)
+      boxes1 = tf.constant([[1, 1, 1, 1]], dtype=tf.float32)
+      boxes2 = tf.constant([[1, 1, 1, 1]], dtype=tf.float32)
 
       giou = ops.giou(boxes1, boxes2)
       self.assertEqual(giou.dtype, tf.float32)
@@ -1713,10 +1716,9 @@ class TestGIoU(test_case.TestCase):
     ]
 
     def graph_fn():
-      boxes1 = tf.constant([[3, 3, 5, 5], [3, 3, 5, 5]],
-          dtype=tf.float32)
+      boxes1 = tf.constant([[3, 3, 5, 5], [3, 3, 5, 5]], dtype=tf.float32)
       boxes2 = tf.constant([[3, 2.5, 5, 5.5], [3, 2.5, 5, 4.5]],
-          dtype=tf.float32)
+                           dtype=tf.float32)
 
       giou = ops.giou(boxes1, boxes2)
       self.assertEqual(giou.dtype, tf.float32)
@@ -1725,6 +1727,7 @@ class TestGIoU(test_case.TestCase):
 
     giou = self.execute(graph_fn, [])
     self.assertAllClose(expected_giou_tensor, giou)
+
 
 class TestCoordinateConversion(test_case.TestCase):
 
@@ -1735,7 +1738,7 @@ class TestCoordinateConversion(test_case.TestCase):
 
     def graph_fn():
       boxes = tf.constant([[3, 3, 5, 5], [3, 4, 2, 6], [0, 0, 0, 0]],
-          dtype=tf.float32)
+                          dtype=tf.float32)
 
       converted = ops.center_to_corner_coordinate(boxes)
       self.assertEqual(converted.dtype, tf.float32)
@@ -1744,7 +1747,6 @@ class TestCoordinateConversion(test_case.TestCase):
 
     converted = self.execute(graph_fn, [])
     self.assertAllClose(expected_box_tensor, converted)
-
 
 
 if __name__ == '__main__':

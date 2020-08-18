@@ -57,7 +57,8 @@ class RegionSimilarityCalculator(six.with_metaclass(ABCMeta, object)):
       return self._compare(boxlist1, boxlist2, groundtruth_labels, predicted_labels)
 
   @abstractmethod
-  def _compare(self, boxlist1, boxlist2, groundtruth_labels=None, predicted_labels=None):
+  def _compare(self, boxlist1, boxlist2,
+               groundtruth_labels=None, predicted_labels=None):
     pass
 
 
@@ -79,28 +80,33 @@ class IouSimilarity(RegionSimilarityCalculator):
     """
     return box_list_ops.iou(boxlist1, boxlist2)
 
-class IouAndClassSimilarity(RegionSimilarityCalculator):
-  """Class to compute similarity based on Intersection over Union (IOU) metric.
+class DETRSimilarity(RegionSimilarityCalculator):
+  """Class to compute similarity for the Detection Transformer model.
 
-  This class computes pairwise similarity between two BoxLists based on IOU.
+  This class computes pairwise similarity between two BoxLists using a weighted
+  combination of IOU, classification scores, and the L1 loss.
   """
+  def __init__(self, l1_weight=5, giou_weight=2):
+    self.l1_weight = l1_weight
+    self.giou_weight = giou_weight
 
-  def _compare(self, boxlist1, boxlist2, groundtruth_labels=None, predicted_labels=None):
+  def _compare(self, boxlist1, boxlist2):
     """Compute pairwise IOU similarity between the two BoxLists.
 
     Args:
-      boxlist1: BoxList holding N boxes.
-      boxlist2: BoxList holding M boxes.
+      boxlist1: BoxList holding N groundtruth boxes.
+      boxlist2: BoxList holding M predicted boxes.
 
     Returns:
       A tensor with shape [N, M] representing pairwise iou scores.
     """
-    groundtruth_labels = tf.concat([tf.expand_dims(groundtruth_labels[:, 0] / 2, axis=1), groundtruth_labels[:, 1:]], axis=-1)
+    groundtruth_labels = boxlist1.get_field(fields.BoxListFields.classes)
+    predicted_labels = boxlist2.get_field(fields.BoxListFields.classes)
     classification_scores = tf.matmul(groundtruth_labels,
         tf.nn.softmax(predicted_labels), transpose_b=True)
-    return -5 * box_list_ops.l1(boxlist1, boxlist2) + \
-           classification_scores + \
-           2 * (1 - box_list_ops.giou_loss(boxlist1, boxlist2))
+    return -self.l1_weight * box_list_ops.l1(
+        boxlist1, boxlist2) + self.giou_weight * box_list_ops.giou(
+        boxlist1, boxlist2) + classification_scores
 
 class NegSqDistSimilarity(RegionSimilarityCalculator):
   """Class to compute similarity based on the squared distance metric.

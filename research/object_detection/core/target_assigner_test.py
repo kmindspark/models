@@ -24,6 +24,7 @@ from object_detection.core import region_similarity_calculator
 from object_detection.core import standard_fields as fields
 from object_detection.core import target_assigner as targetassigner
 from object_detection.matchers import argmax_matcher
+from object_detection.matchers import hungarian_matcher
 from object_detection.utils import np_box_ops
 from object_detection.utils import test_case
 from object_detection.utils import tf_version
@@ -113,6 +114,7 @@ class TargetAssignerTest(test_case.TestCase):
     self.assertEqual(cls_weights_out.dtype, np.float32)
     self.assertEqual(reg_targets_out.dtype, np.float32)
     self.assertEqual(reg_weights_out.dtype, np.float32)
+
 
   def test_assign_agnostic_with_keypoints(self):
     def graph_fn(anchor_means, groundtruth_box_corners,
@@ -502,7 +504,6 @@ class BatchTargetAssignerTest(test_case.TestCase):
     return targetassigner.TargetAssigner(similarity_calc, matcher, box_coder)
 
   def test_batch_assign_targets(self):
-
     def graph_fn(anchor_means, groundtruth_boxlist1, groundtruth_boxlist2):
       box_list1 = box_list.BoxList(groundtruth_boxlist1)
       box_list2 = box_list.BoxList(groundtruth_boxlist2)
@@ -1921,7 +1922,6 @@ class CenterNetMaskTargetAssignerTest(test_case.TestCase):
     np.testing.assert_array_almost_equal(
         expected_seg_target, segmentation_target)
 
-
 class CenterNetDensePoseTargetAssignerTest(test_case.TestCase):
 
   def test_assign_part_and_coordinate_targets(self):
@@ -2189,6 +2189,95 @@ class CornerOffsetTargetAssignerTest(test_case.TestCase):
     self.assertAllClose(corner_offsets, np.zeros((1, 5, 5, 4)))
     self.assertAllClose(foreground, np.zeros((1, 5, 5)))
 
+
+class DETRTargetAssignerTest(test_case.TestCase):
+  def test_assign_detr(self):
+    def graph_fn(pred_corners, groundtruth_box_corners,
+                 groundtruth_labels, predicted_labels):
+      detr_target_assigner = targetassigner.DETRTargetAssigner()
+      pred_boxlist = box_list.BoxList(pred_corners)
+      groundtruth_boxlist = box_list.BoxList(groundtruth_box_corners)
+      result = detr_target_assigner.assign(
+          pred_boxlist, groundtruth_boxlist,
+          predicted_labels, groundtruth_labels)
+      (cls_targets, cls_weights, reg_targets, reg_weights) = result
+      return (cls_targets, cls_weights, reg_targets, reg_weights)
+
+    pred_corners = np.array([[0.25, 0.25, 0.4, 0.2],
+                             [0.5, 0.8, 1.0, 0.8],
+                             [0.9, 0.5, 0.1, 1.0]], dtype=np.float32)
+    groundtruth_box_corners = np.array([[0.0, 0.0, 0.5, 0.5],
+                                        [0.5, 0.5, 0.9, 0.9]],
+                                       dtype=np.float32)
+    predicted_labels = np.array([[-3.0, 3.0], [2.0, 9.4], [5.0, 1.0]],
+                                dtype=np.float32)
+    groundtruth_labels = np.array([[0.0, 1.0], [0.0, 1.0]],
+                                  dtype=np.float32)
+    
+    exp_cls_targets = [[0, 1], [0, 1], [1, 0]]
+    exp_cls_weights = [[1, 1], [1, 1], [1, 1]]
+    exp_reg_targets = [[0.25, 0.25, 0.5, 0.5],
+                       [0.7, 0.7, 0.4, 0.4],
+                       [0, 0, 0, 0]]
+    exp_reg_weights = [1, 1, 0]
+
+    (cls_targets_out,
+     cls_weights_out, reg_targets_out, reg_weights_out) = self.execute(
+         graph_fn, [pred_corners, groundtruth_box_corners,
+                    groundtruth_labels, predicted_labels])
+
+    self.assertAllClose(cls_targets_out, exp_cls_targets)
+    self.assertAllClose(cls_weights_out, exp_cls_weights)
+    self.assertAllClose(reg_targets_out, exp_reg_targets)
+    self.assertAllClose(reg_weights_out, exp_reg_weights)
+    self.assertEqual(cls_targets_out.dtype, np.float32)
+    self.assertEqual(cls_weights_out.dtype, np.float32)
+    self.assertEqual(reg_targets_out.dtype, np.float32)
+    self.assertEqual(reg_weights_out.dtype, np.float32)
+
+  def test_batch_assign_detr(self):
+    def graph_fn(pred_corners, groundtruth_box_corners,
+                groundtruth_labels, predicted_labels):
+      detr_target_assigner = targetassigner.DETRTargetAssigner()
+      pred_boxlist = [box_list.BoxList(pred_corners)]
+      groundtruth_boxlist = [box_list.BoxList(groundtruth_box_corners)]
+      result = detr_target_assigner.batch_assign(
+          pred_boxlist, groundtruth_boxlist,
+          [predicted_labels], [groundtruth_labels])
+      (cls_targets, cls_weights, reg_targets, reg_weights) = result
+      return (cls_targets, cls_weights, reg_targets, reg_weights)
+
+    pred_corners = np.array([[0.25, 0.25, 0.4, 0.2],
+                             [0.5, 0.8, 1.0, 0.8],
+                             [0.9, 0.5, 0.1, 1.0]], dtype=np.float32)
+    groundtruth_box_corners = np.array([[0.0, 0.0, 0.5, 0.5],
+                                        [0.5, 0.5, 0.9, 0.9]],
+                                      dtype=np.float32)
+    predicted_labels = np.array([[-3.0, 3.0], [2.0, 9.4], [5.0, 1.0]],
+                                dtype=np.float32)
+    groundtruth_labels = np.array([[0.0, 1.0], [0.0, 1.0]],
+                                  dtype=np.float32)
+    
+    exp_cls_targets = [[[0, 1], [0, 1], [1, 0]]]
+    exp_cls_weights = [[[1, 1], [1, 1], [1, 1]]]
+    exp_reg_targets = [[[0.25, 0.25, 0.5, 0.5],
+                       [0.7, 0.7, 0.4, 0.4],
+                       [0, 0, 0, 0]]]
+    exp_reg_weights = [[1, 1, 0]]
+
+    (cls_targets_out,
+    cls_weights_out, reg_targets_out, reg_weights_out) = self.execute(
+        graph_fn, [pred_corners, groundtruth_box_corners,
+                    groundtruth_labels, predicted_labels])
+
+    self.assertAllClose(cls_targets_out, exp_cls_targets)
+    self.assertAllClose(cls_weights_out, exp_cls_weights)
+    self.assertAllClose(reg_targets_out, exp_reg_targets)
+    self.assertAllClose(reg_weights_out, exp_reg_weights)
+    self.assertEqual(cls_targets_out.dtype, np.float32)
+    self.assertEqual(cls_weights_out.dtype, np.float32)
+    self.assertEqual(reg_targets_out.dtype, np.float32)
+    self.assertEqual(reg_weights_out.dtype, np.float32)
 
 if __name__ == '__main__':
   tf.enable_v2_behavior()
