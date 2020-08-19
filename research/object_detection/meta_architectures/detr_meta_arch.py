@@ -100,7 +100,6 @@ class DETRMetaArch(model.DetectionModel):
     self._giou_loss_weight = giou_loss_weight
     self._l1_loss_weight = l1_loss_weight
     self._cls_loss_weight = cls_loss_weight
-    self._box_coder = self.target_assigner.get_box_coder()
     self._post_filter = tf.keras.layers.Conv2D(
         self.hidden_dimension, 1)
     self._score_conversion_fn = score_conversion_fn
@@ -119,19 +118,17 @@ class DETRMetaArch(model.DetectionModel):
     x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0),
                                        x.shape[0],
                                        axis=0)], training=self.is_training)
+    print(x)
     bboxes_encoded, logits = self._box_ffn(x), self.cls(x)
+    print(bboxes_encoded)
 
-    reshaped_bboxes = tf.reshape(
-        bboxes_encoded, [bboxes_encoded.shape[0] * bboxes_encoded.shape[1],
-        1, bboxes_encoded.shape[2]])
     batches_queries = tf.repeat(tf.expand_dims(self.num_queries,
         0), x.shape[0], axis=0)
 
     return {
-      "refined_box_encodings": reshaped_bboxes,
+      "box_encodings": bboxes_encoded,
       "class_predictions_with_background": logits,
       "num_proposals": batches_queries,
-      "proposal_boxes": bboxes_encoded,
       "image_shape": image_shape
     }
 
@@ -229,23 +226,19 @@ class DETRMetaArch(model.DetectionModel):
        groundtruth_weights_list) = self._format_groundtruth_data(
           self._image_batch_shape_2d(prediction_dict['image_shape']))
       loss_dict = self._loss_box_classifier(
-            prediction_dict['refined_box_encodings'],
+            prediction_dict['box_encodings'],
             prediction_dict['class_predictions_with_background'],
-            prediction_dict['proposal_boxes'],
             groundtruth_boxlists,
             groundtruth_classes_with_background_list,
-            groundtruth_weights_list,
-            prediction_dict['image_shape'])
+            groundtruth_weights_list)
     return loss_dict
 
   def _loss_box_classifier(self,
-                           refined_box_encodings,
+                           box_encodings,
                            class_predictions_with_background,
-                           proposal_boxes,
                            groundtruth_boxlists,
                            groundtruth_classes_with_background_list,
-                           groundtruth_weights_list,
-                           image_shape):
+                           groundtruth_weights_list):
     """Computes scalar box classifier loss tensors.
 
     Uses self._detector_target_assigner to obtain regression and classification
@@ -267,8 +260,6 @@ class DETRMetaArch(model.DetectionModel):
         [total_num_proposals, num_classes + 1] containing class
         predictions (logits) for each of the anchors.  Note that this tensor
         *includes* background class predictions (at class index 0).
-      proposal_boxes: [batch_size, self.num_queries, 4] representing
-        decoded proposal bounding boxes.
       groundtruth_boxlists: a list of BoxLists containing coordinates of the
         groundtruth boxes.
       groundtruth_classes_with_background_list: a list of 2-D one-hot
@@ -284,8 +275,9 @@ class DETRMetaArch(model.DetectionModel):
         corresponding loss values.
   """
     proposal_boxlists = [
-        box_list.BoxList(proposal_boxes_single_image)
-        for proposal_boxes_single_image in tf.unstack(proposal_boxes)]
+        box_list.BoxList(ops.center_to_corner_coordinate(
+            proposal_boxes_single_image))
+        for proposal_boxes_single_image in tf.unstack(box_encodings)]
     batch_size = len(proposal_boxlists)
 
     (batch_cls_targets_with_background, batch_cls_weights, batch_reg_targets,
@@ -300,9 +292,6 @@ class DETRMetaArch(model.DetectionModel):
     class_predictions_with_background = tf.reshape(
         class_predictions_with_background,
         [batch_size, self.num_queries, -1])
-    reshaped_refined_box_encodings = tf.reshape(
-        refined_box_encodings,
-        [batch_size, self.num_queries, 4])
 
     losses_mask = None
     if self.groundtruth_has_field(fields.InputDataFields.is_annotated):
@@ -310,13 +299,13 @@ class DETRMetaArch(model.DetectionModel):
           fields.InputDataFields.is_annotated))
 
     l1_loc_loss = tf.reduce_sum(self._l1_localization_loss(
-        reshaped_refined_box_encodings,
+        box_encodings,
         batch_reg_targets,
         weights=batch_reg_weights,
         losses_mask=losses_mask)) * self._l1_loss_weight / batch_size
 
     giou_loc_loss = tf.reduce_sum(self._giou_localization_loss(
-        ops.center_to_corner_coordinate(reshaped_refined_box_encodings),
+        ops.center_to_corner_coordinate(box_encodings),
         ops.center_to_corner_coordinate(batch_reg_targets),
         weights=batch_reg_weights,
         losses_mask=losses_mask)) * self._giou_loss_weight / batch_size
@@ -488,7 +477,7 @@ class DETRMetaArch(model.DetectionModel):
       fields.DetectionResultFields.detection_multiclass_scores:
           multiclass_scores,
       fields.DetectionResultFields.num_detections:
-          self.num_queries, dtype=tf.float32),
+        tf.cast(tf.count_nonzero(processed_scores), dtype=tf.float32),
       fields.DetectionResultFields.raw_detection_boxes:
           refined_box_encodings_batch,
       fields.DetectionResultFields.raw_detection_scores:
