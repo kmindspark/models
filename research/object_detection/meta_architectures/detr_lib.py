@@ -232,7 +232,7 @@ class PrePostProcessingWrapperOld(tf.keras.layers.Layer):
   """Wrapper class that applies layer pre-processing and post-processing."""
 
   def __init__(self, layer, layer_postprocess_dropout):
-    super(PrePostProcessingWrapper, self).__init__()
+    super(PrePostProcessingWrapperOld, self).__init__()
     self.layer = layer
     self._postprocess_dropout = layer_postprocess_dropout
 
@@ -240,7 +240,7 @@ class PrePostProcessingWrapperOld(tf.keras.layers.Layer):
     # Create normalization layer
     self.layer_norm = tf.keras.layers.LayerNormalization(
         epsilon=1e-6, dtype="float32")
-    super(PrePostProcessingWrapper, self).build(input_shape)
+    super(PrePostProcessingWrapperOld, self).build(input_shape)
 
   def get_config(self):
     return {
@@ -293,8 +293,8 @@ class EncoderStack(tf.keras.layers.Layer):
           self._hidden_size, self._filter_size, self._relu_dropout)
 
       self.layers.append([
-          PrePostProcessingWrapper(self_attention_layer, self._layer_postprocess_dropout),
-          PrePostProcessingWrapper(feed_forward_network, self._layer_postprocess_dropout)
+          PrePostProcessingWrapperOld(self_attention_layer, self._layer_postprocess_dropout),
+          PrePostProcessingWrapperOld(feed_forward_network, self._layer_postprocess_dropout)
       ])
 
     # Create final layer normalization layer.
@@ -384,9 +384,9 @@ class DecoderStack(tf.keras.layers.Layer):
           self._hidden_size, self._filter_size, self._relu_dropout)
 
       self.layers.append([
-          PrePostProcessingWrapper(self_attention_layer, self._layer_postprocess_dropout),
-          PrePostProcessingWrapper(enc_dec_attention_layer, self._layer_postprocess_dropout),
-          PrePostProcessingWrapper(feed_forward_network, self._layer_postprocess_dropout)
+          PrePostProcessingWrapperOld(self_attention_layer, self._layer_postprocess_dropout),
+          PrePostProcessingWrapperOld(enc_dec_attention_layer, self._layer_postprocess_dropout),
+          PrePostProcessingWrapperOld(feed_forward_network, self._layer_postprocess_dropout)
       ])
     self.output_normalization = tf.keras.layers.LayerNormalization(
         epsilon=1e-6, dtype="float32")
