@@ -163,17 +163,7 @@ class Transformer(tf.keras.Model):
       # Prepare inputs to decoder layers by shifting targets, adding positional
       # encoding and applying dropout.
       decoder_inputs = tf.cast(targets, self._dtype)
-      with tf.name_scope("shift_targets"):
-        # Shift targets to the right, and remove the last element
-        decoder_inputs = tf.pad(decoder_inputs,
-                                [[0, 0], [1, 0], [0, 0]])[:, :-1, :]
-      #with tf.name_scope("add_pos_encoding"):
-      #  
-        #pos_encoding = self.position_embedding(decoder_inputs)
-        #pos_encoding = tf.cast(pos_encoding, self.params["dtype"])
-      #  decoder_inputs += pos_encoding
-
-      #decoder_inputs = tf.keras.layers.Dropout(self._layer_postprocess_dropout)(decoder_inputs, training=training)
+      
       if training:
         decoder_inputs = tf.nn.dropout(
             decoder_inputs, rate=self._layer_postprocess_dropout)
