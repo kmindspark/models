@@ -82,7 +82,7 @@ class DETRMetaArch(model.DetectionModel):
     self._image_resizer_fn = image_resizer_fn
     self.num_queries = num_queries
     self.hidden_dimension = hidden_dimension
-    self.feature_extractor = feature_extractor
+    self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=is_training, weight_decay=0.0001) #feature_extractor
     self.first_stage = feature_extractor.get_proposal_feature_extractor_model()
     self.target_assigner = target_assigner
     self.transformer_args = {"hidden_size": self.hidden_dimension,
@@ -91,16 +91,12 @@ class DETRMetaArch(model.DetectionModel):
                              "layer_postprocess_dropout": 0.1,
                              "dtype": tf.float32, 
                              "num_hidden_layers": 3,
-                             "filter_size": 2048,
+                             "filter_size": 256,
                              "relu_dropout": 0.1}
     self.transformer = detr_lib.Transformer(**self.transformer_args)
     self.cls = tf.keras.layers.Dense(num_classes + 1)
     self.cls_activation = tf.keras.layers.Softmax()
-    self.queries = tf.keras.backend.variable(
-        value=tf.random_normal_initializer(stddev=1.0)(
-            [self.num_queries, self.hidden_dimension]),
-            name="object_queries",
-            dtype=tf.float32)
+    self.queries = tf.keras.backend.variable(tf.zeros([self.num_queries, self.hidden_dimension]))
     self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
     self._localization_loss_iou = losses.WeightedGIOULocalizationLoss()
     self._classification_loss = losses.WeightedSoftmaxClassificationLoss()
@@ -332,7 +328,7 @@ class DETRMetaArch(model.DetectionModel):
       paddings_indicator = self._padded_batched_proposals_indicator(
           num_proposals, proposal_boxes.shape[1])
       proposal_boxlists = [
-          box_list.BoxList(convert_to_minmaxcoords(proposal_boxes_single_image))
+          box_list.BoxList(proposal_boxes_single_image)
           for proposal_boxes_single_image in tf.unstack(proposal_boxes)]
       batch_size = len(proposal_boxlists)
 
