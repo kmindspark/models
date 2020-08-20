@@ -118,9 +118,7 @@ class DETRMetaArch(model.DetectionModel):
     x = self.transformer([x, tf.repeat(tf.expand_dims(self.queries, 0),
                                        x.shape[0],
                                        axis=0)], training=self.is_training)
-    print(x)
     bboxes_encoded, logits = self._box_ffn(x), self.cls(x)
-    print(bboxes_encoded)
 
     batches_queries = tf.repeat(tf.expand_dims(self.num_queries,
         0), x.shape[0], axis=0)
@@ -372,15 +370,15 @@ class DETRMetaArch(model.DetectionModel):
           prediction_dict['box_encodings'],
           prediction_dict['class_predictions_with_background'],
           true_image_shapes,
-          orig_image_shapes=prediction_dict['image_shape'])
+          prediction_dict['image_shape'])
 
     return detections_dict
 
   def _postprocess_box_classifier(self,
                                   refined_box_encodings,
                                   class_predictions_with_background,
-                                  image_shapes,
-                                  orig_image_shapes=None):
+                                  true_image_shapes,
+                                  preprocessed_image_shapes):
     """Converts predictions from the box classifier to detections.
 
     Args:
@@ -398,7 +396,9 @@ class DETRMetaArch(model.DetectionModel):
         bounding boxes in absolute coordinates.
       num_proposals: a 1-D int32 tensor of shape [batch] representing the number
         of proposals predicted for each image in the batch.
-      image_shapes: a 2-D int32 tensor containing shapes of input image in the
+      true_image_shapes: a 2-D int32 tensor containing shapes of input image in the
+        batch.
+      preprocessed_image_shapes: a 2-D int32 tensor containing shapes of input image in the
         batch.
 
     Returns:
@@ -421,24 +421,19 @@ class DETRMetaArch(model.DetectionModel):
           raw detection boxes. The value total_detections is the number of
           anchors (i.e. the total number of boxes before NMS).
     """
-    clip_window = self._compute_clip_window(image_shapes)
-    refined_box_encodings_batch = tf.reshape(
-        refined_box_encodings,
-        [-1, self.num_queries, 4])
-    class_predictions_with_background_batch = tf.reshape(
-        class_predictions_with_background,
-        [-1, self.num_queries, self.num_classes + 1])
+    clip_window = self._compute_clip_window(true_image_shapes)
 
     batch_size = shape_utils.combined_static_and_dynamic_shape(
-        refined_box_encodings_batch)[0]
+        refined_box_encodings)[0]
     refined_decoded_boxes_batch = tf.reshape(ops.center_to_corner_coordinate(
-        tf.reshape(refined_box_encodings_batch, [-1, 4])),
-        [batch_size, -1, 4])
+        tf.reshape(refined_box_encodings, [-1, 4])),
+        [batch_size, self.num_queries, 4])
+
     refined_decoded_boxes_batch = ops.normalized_to_image_coordinates(
-        refined_decoded_boxes_batch, image_shape=orig_image_shapes, temp=True)
+        refined_decoded_boxes_batch, image_shape=preprocessed_image_shapes, temp=True)
 
     normalized_class_predictions_batch = self._score_conversion_fn(
-        class_predictions_with_background_batch)
+        class_predictions_with_background)
     multiclass_scores = tf.slice(normalized_class_predictions_batch,
         [0, 0, 1], [-1, -1, -1])
 
@@ -468,7 +463,7 @@ class DETRMetaArch(model.DetectionModel):
       fields.DetectionResultFields.num_detections:
         tf.cast(tf.count_nonzero(processed_scores), dtype=tf.float32),
       fields.DetectionResultFields.raw_detection_boxes:
-          refined_box_encodings_batch,
+          refined_box_encodings,
       fields.DetectionResultFields.raw_detection_scores:
           normalized_class_predictions_batch
     }
@@ -498,7 +493,6 @@ class DETRMetaArch(model.DetectionModel):
         (or k-hot) tensors of shape [num_boxes, num_classes+1] containing the
         class targets with the 0th index assumed to map to the background class.
     """
-    # pylint: disable=g-complex-comprehension
     groundtruth_boxes = tf.stack(
         self.groundtruth_lists(fields.BoxListFields.boxes))
     groundtruth_classes_with_background_list = []
@@ -513,6 +507,7 @@ class DETRMetaArch(model.DetectionModel):
       groundtruth_weights_list = self.groundtruth_lists(
           fields.BoxListFields.weights)
     else:
+      raise Exception("Cannot have groundtruth without weights.")
       # Set weights for all batch elements equally to 1.0
       groundtruth_weights_list = []
       for groundtruth_classes in groundtruth_classes_with_background_list:
