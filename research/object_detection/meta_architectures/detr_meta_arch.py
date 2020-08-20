@@ -274,16 +274,13 @@ class DETRMetaArch(model.DetectionModel):
         'classification_loss') to scalar tensors representing
         corresponding loss values.
   """
-    box_encodings = 
-    proposal_boxlists = [
-        box_list.BoxList(ops.center_to_corner_coordinate(
-            proposal_boxes_single_image))
-        for proposal_boxes_single_image in tf.unstack(box_encodings)]
-    batch_size = len(proposal_boxlists)
+    decoded_boxes = shape_utils.static_or_dynamic_map_fn(
+        ops.center_to_corner_coordinate, box_encodings)
+    batch_size = decoded_boxes.shape[0]
 
     (batch_cls_targets_with_background, batch_cls_weights, batch_reg_targets,
       batch_reg_weights, _) = self.target_assigner.batch_assign(
-          pred_box_batch=proposal_boxlists,
+          pred_box_batch=decoded_boxes,
           gt_box_batch=groundtruth_boxlists,
           pred_class_batch=class_predictions_with_background,
           gt_class_targets_batch=groundtruth_classes_with_background_list,
