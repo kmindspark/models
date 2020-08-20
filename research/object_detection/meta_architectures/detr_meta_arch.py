@@ -281,7 +281,7 @@ class DETRMetaArch(model.DetectionModel):
     batch_size = len(proposal_boxlists)
 
     (batch_cls_targets_with_background, batch_cls_weights, batch_reg_targets,
-      batch_reg_weights, _) = self.target_assigner.assign(
+      batch_reg_weights, _) = self.target_assigner.batch_assign(
           box_preds=proposal_boxlists,
           groundtruth_boxes=groundtruth_boxlists,
           class_predictions=class_predictions_with_background,
