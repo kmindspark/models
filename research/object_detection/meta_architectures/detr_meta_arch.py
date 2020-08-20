@@ -529,6 +529,7 @@ class DETRMetaArch(model.DetectionModel):
       groundtruth_weights_list = self.groundtruth_lists(
           fields.BoxListFields.weights)
     else:
+      raise Exception("Cannot have groundtruth without weights.")
       # Set weights for all batch elements equally to 1.0
       groundtruth_weights_list = []
       for groundtruth_classes in groundtruth_classes_with_background_list:
