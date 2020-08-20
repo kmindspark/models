@@ -274,6 +274,7 @@ class DETRMetaArch(model.DetectionModel):
         'classification_loss') to scalar tensors representing
         corresponding loss values.
   """
+    box_encodings = 
     proposal_boxlists = [
         box_list.BoxList(ops.center_to_corner_coordinate(
             proposal_boxes_single_image))
@@ -282,10 +283,10 @@ class DETRMetaArch(model.DetectionModel):
 
     (batch_cls_targets_with_background, batch_cls_weights, batch_reg_targets,
       batch_reg_weights, _) = self.target_assigner.batch_assign(
-          box_preds=proposal_boxlists,
-          groundtruth_boxes=groundtruth_boxlists,
-          class_predictions=class_predictions_with_background,
-          groundtruth_labels=groundtruth_classes_with_background_list,
+          pred_box_batch=proposal_boxlists,
+          gt_box_batch=groundtruth_boxlists,
+          pred_class_batch=class_predictions_with_background,
+          gt_class_targets_batch=groundtruth_classes_with_background_list,
           gt_weights_batch=groundtruth_weights_list)
 
     # Ensure data are of the correct shape
@@ -510,11 +511,8 @@ class DETRMetaArch(model.DetectionModel):
         class targets with the 0th index assumed to map to the background class.
     """
     # pylint: disable=g-complex-comprehension
-    groundtruth_boxlists = [
-        box_list.BoxList(boxes)
-        for i, boxes in enumerate(
-            self.groundtruth_lists(fields.BoxListFields.boxes))
-    ]
+    groundtruth_boxes = tf.stack(
+        self.groundtruth_lists(fields.BoxListFields.boxes))
     groundtruth_classes_with_background_list = []
     for one_hot_encoding in self.groundtruth_lists(
         fields.BoxListFields.classes):
@@ -534,7 +532,7 @@ class DETRMetaArch(model.DetectionModel):
         groundtruth_weights = tf.ones(num_gt)
         groundtruth_weights_list.append(groundtruth_weights)
 
-    return (groundtruth_boxlists, groundtruth_classes_with_background_list,
+    return (groundtruth_boxes, groundtruth_classes_with_background_list,
             groundtruth_weights_list)
 
   def _image_batch_shape_2d(self, image_batch_shape_1d):

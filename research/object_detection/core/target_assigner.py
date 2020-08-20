@@ -42,7 +42,6 @@ import tensorflow.compat.v2 as tf2
 
 from object_detection.box_coders import faster_rcnn_box_coder
 from object_detection.box_coders import mean_stddev_box_coder
-from object_detection.box_coders import detr_box_coder
 from object_detection.core import box_coder
 from object_detection.core import box_list
 from object_detection.core import box_list_ops
@@ -59,8 +58,6 @@ from object_detection.utils import tf_version
 
 if tf_version.is_tf1():
   from object_detection.matchers import bipartite_matcher  # pylint: disable=g-import-not-at-top
-elif tf_version.is_tf2():
-  from object_detection.matchers import hungarian_matcher
 
 ResizeMethod = tf2.image.ResizeMethod
 
@@ -111,8 +108,7 @@ class TargetAssigner(object):
              groundtruth_boxes,
              groundtruth_labels=None,
              unmatched_class_label=None,
-             groundtruth_weights=None,
-             class_predictions=None):
+             groundtruth_weights=None):
     """Assign classification and regression targets to each anchor.
 
     For a given set of anchors and groundtruth detections, match anchors
@@ -165,11 +161,6 @@ class TargetAssigner(object):
       ValueError: if anchors or groundtruth_boxes are not of type
         box_list.BoxList
     """
-    #tf.print(anchors.data['boxes'])
-    #tf.print(anchors.data['boxes'].shape)
-    #tf.print(groundtruth_boxes.data['boxes'])
-    #tf.print(groundtruth_boxes.data['boxes'].shape)
-
     if not isinstance(anchors, box_list.BoxList):
       raise ValueError('anchors must be an BoxList')
     if not isinstance(groundtruth_boxes, box_list.BoxList):
@@ -204,22 +195,10 @@ class TargetAssigner(object):
 
     with tf.control_dependencies(
         [unmatched_shape_assert, labels_and_box_shapes_assert]):
-
-      #tf.print(anchors.data['boxes'])
-      #tf.print(anchors.data['boxes'].shape)
-      #tf.print(groundtruth_boxes.data['boxes'])
-      #tf.print(groundtruth_boxes.data['boxes'].shape)
-      
       match_quality_matrix = self._similarity_calc.compare(groundtruth_boxes,
-                                                           anchors,
-                                                           groundtruth_labels=groundtruth_labels,
-                                                           predicted_labels=class_predictions)
-      print(match_quality_matrix)                                                     
+                                                           anchors)
       match = self._matcher.match(match_quality_matrix,
                                   valid_rows=tf.greater(groundtruth_weights, 0))
-
-      print("Match", match._match_results)
-      #print(match._match_results)
       reg_targets = self._create_regression_targets(anchors,
                                                     groundtruth_boxes,
                                                     match)
@@ -277,7 +256,6 @@ class TargetAssigner(object):
     Returns:
       reg_targets: a float32 tensor with shape [N, box_code_dimension]
     """
-    #print(groundtruth_boxes.data['boxes'])
     matched_gt_boxes = match.gather_based_on_match(
         groundtruth_boxes.get(),
         unmatched_value=tf.zeros(4),
@@ -292,14 +270,7 @@ class TargetAssigner(object):
           ignored_value=tf.zeros(groundtruth_keypoints.get_shape()[1:]))
       matched_gt_boxlist.add_field(fields.BoxListFields.keypoints,
                                    matched_keypoints)
-    #print(matched_gt_boxlist.data['boxes'])
-    #print(matched_gt_boxlist.data['boxes'])
-    #print(matched_gt_boxlist.get_center_coordinates_and_sizes())
-    a, b, c, d = matched_gt_boxlist.get_center_coordinates_and_sizes()
-    #print(c)
-    #print(tf.log(c))
     matched_reg_targets = self._box_coder.encode(matched_gt_boxlist, anchors)
-    #print(matched_reg_targets)
     match_results_shape = shape_utils.combined_static_and_dynamic_shape(
         match.match_results)
 
@@ -310,7 +281,6 @@ class TargetAssigner(object):
     reg_targets = tf.where(matched_anchors_mask,
                            matched_reg_targets,
                            unmatched_ignored_reg_targets)
-    #print(reg_targets)
     return reg_targets
 
   def _default_regression_target(self):
@@ -463,12 +433,7 @@ def create_target_assigner(reference, stage=None,
                                            force_match_for_each_row=False,
                                            negatives_lower_than_unmatched=False,
                                            use_matmul_gather=use_matmul_gather)
-    box_coder_instance = detr_box_coder.DETRBoxCoder()
-
-  elif reference == 'DETR':
-    similarity_calc = sim_calc.IouAndClassSimilarity()
-    matcher = hungarian_matcher.HungarianBipartiteMatcher()
-    box_coder_instance = detr_box_coder.DETRBoxCoder()
+    box_coder_instance = faster_rcnn_box_coder.FasterRcnnBoxCoder()
 
   else:
     raise ValueError('No valid combination of reference and stage.')
@@ -482,8 +447,7 @@ def batch_assign(target_assigner,
                  gt_box_batch,
                  gt_class_targets_batch,
                  unmatched_class_label=None,
-                 gt_weights_batch=None,
-                 class_predictions=None):
+                 gt_weights_batch=None):
   """Batched assignment of classification and regression targets.
 
   Args:
@@ -543,12 +507,8 @@ def batch_assign(target_assigner,
   match_list = []
   if gt_weights_batch is None:
     gt_weights_batch = [None] * len(gt_class_targets_batch)
-  #print(class_predictions)
-  #print(gt_class_targets_batch)
-  class_predictions = tf.unstack(class_predictions)
-  for anchors, gt_boxes, gt_class_targets, gt_weights, class_preds in zip(
-      anchors_batch, gt_box_batch, gt_class_targets_batch, gt_weights_batch,
-      class_predictions):
+  for anchors, gt_boxes, gt_class_targets, gt_weights in zip(
+      anchors_batch, gt_box_batch, gt_class_targets_batch, gt_weights_batch):
     (cls_targets, cls_weights,
      reg_targets, reg_weights, match) = target_assigner.assign(
          anchors, gt_boxes, gt_class_targets, unmatched_class_label,
@@ -1943,7 +1903,7 @@ class CenterNetCornerOffsetTargetAssigner(object):
 class DETRTargetAssigner(object):
   """Target assigner to compute classification and regression targets."""
 
-  def __init__(self, negative_class_weight=1.0):
+  def __init__(self):
     """Construct Object Detection Target Assigner.
 
     Args:
@@ -1951,30 +1911,27 @@ class DETRTargetAssigner(object):
         predicted boxes.
       box_coder_instance: an object_detection.core.BoxCoder used to encode
         matching groundtruth boxes with respect to predicted boxes.
-      negative_class_weight: classification weight to be associated to negative
-        boxes (default: 1.0). The weight must be in [0., 1.].
 
     """
     self._similarity_calc = sim_calc.DETRSimilarity()
     self._matcher = hungarian_matcher.HungarianBipartiteMatcher()
-    self._negative_class_weight = negative_class_weight
 
   def batch_assign(self,
-                   pred_boxes_batch,
+                   pred_box_batch,
                    gt_box_batch,
-                   class_predictions,
+                   pred_class_batch,
                    gt_class_targets_batch,
                    gt_weights_batch=None):
-                  
+
     """Batched assignment of classification and regression targets.
 
     Args:
-      pred_boxes_batch: list of BoxList objects with length batch_size
-        representing predicted box sets.
-      gt_box_batch: a list of BoxList objects with length batch_size
-        representing groundtruth boxes for each image in the batch
-      class_predictions: A list of tensors with length batch_size, where each
-        each tensor has shape [max_num_boxes, num_classes] to be used
+      pred_box_batch: a tensor of shape [batch_size, num_queries, 4]
+        representing predicted bounding boxes.
+      gt_box_batch: a tensor of shape [batch_size, num_queries, 4]
+        representing groundtruth bounding boxes.
+      pred_class_batch: A list of tensors with length batch_size, where each
+        each tensor has shape [num_queries, num_classes] to be used
         by certain similarity calculators.
       gt_class_targets_batch: a list of tensors with length batch_size, where
         each tensor has shape [num_gt_boxes_i, num_classes] and
@@ -1992,19 +1949,27 @@ class DETRTargetAssigner(object):
         box_code_dimension]
       batch_reg_weights: a tensor with shape [batch_size, num_pred_boxes].
     """
+    pred_box_batch = [
+        box_list.BoxList(pred_box)
+        for pred_box in tf.unstack(pred_box_batch)]
+    gt_box_batch = [
+        box_list.BoxList(gt_box)
+        for gt_box in tf.unstack(gt_box_batch)]
+
     cls_targets_list = []
     cls_weights_list = []
     reg_targets_list = []
     reg_weights_list = []
     if gt_weights_batch is None:
       gt_weights_batch = [None] * len(gt_class_targets_batch)
-    class_predictions = tf.unstack(class_predictions)
-    for pred_boxes, gt_boxes, class_preds, gt_class_targets, gt_weights in zip(
-        pred_boxes_batch, gt_box_batch, class_predictions,
-        gt_class_targets_batch, gt_weights_batch):
+    pred_class_batch = tf.unstack(pred_class_batch)
+    for (pred_boxes, gt_boxes, pred_class_batch,
+         gt_class_targets, gt_weights) in zip(
+            pred_box_batch, gt_box_batch, pred_class_batch,
+            gt_class_targets_batch, gt_weights_batch):
       (cls_targets, cls_weights,
-      reg_targets, reg_weights) = self.assign(
-          pred_boxes, gt_boxes, class_preds, gt_class_targets, gt_weights)
+       reg_targets, reg_weights) = self.assign(
+          pred_boxes, gt_boxes, pred_class_batch, gt_class_targets, gt_weights)
       cls_targets_list.append(cls_targets)
       cls_weights_list.append(cls_weights)
       reg_targets_list.append(reg_targets)
@@ -2017,85 +1982,88 @@ class DETRTargetAssigner(object):
             batch_reg_weights)
 
   def assign(self,
-             box_preds,
-             groundtruth_boxes,
-             class_predictions,
-             groundtruth_labels,
-             groundtruth_weights=None):
+             pred_boxes,
+             gt_boxes,
+             pred_classes,
+             gt_labels,
+             gt_weights=None):
     """Assign classification and regression targets to each box_pred.
 
-    For a given set of box_preds and groundtruth detections, match box_preds
-    to groundtruth_boxes and assign classification and regression targets to
+    For a given set of pred_boxes and groundtruth detections, match pred_boxes
+    to gt_boxes and assign classification and regression targets to
     each box_pred as well as weights based on the resulting match (specifying,
-    e.g., which box_preds should not contribute to training loss).
+    e.g., which pred_boxes should not contribute to training loss).
 
-    box_preds that are not matched to anything are given a classification target
+    pred_boxes that are not matched to anything are given a classification target
     of self._unmatched_cls_target which can be specified via the constructor.
 
     Args:
-      box_preds: a BoxList representing N box_preds
-      groundtruth_boxes: a BoxList representing M groundtruth boxes
-      class_predictions: A tensor with shape [max_num_boxes, num_classes]
+      pred_boxes: a BoxList representing N pred_boxes
+      gt_boxes: a BoxList representing M groundtruth boxes
+      pred_classes: A tensor with shape [max_num_boxes, num_classes]
         to be used by certain similarity calculators.
-      groundtruth_labels:  a tensor of shape [M, num_classes]
+      gt_labels:  a tensor of shape [M, num_classes]
         with labels for each of the ground_truth boxes. The subshape
         [num_classes] can be empty (corresponding to scalar inputs).  When set
-        to None, groundtruth_labels assumes a binary problem where all
+        to None, gt_labels assumes a binary problem where all
         ground_truth boxes get a positive label (of 1).
-      groundtruth_weights: a float tensor of shape [M] indicating the weight to
-        assign to all box_preds match to a particular groundtruth box. The weights
-        must be in [0., 1.]. If None, all weights are set to 1. Generally no
-        groundtruth boxes with zero weight match to any box_preds as matchers are
-        aware of groundtruth weights. Additionally, `cls_weights` and
-        `reg_weights` are calculated using groundtruth weights as an added
-        safety.
+      gt_weights: a float tensor of shape [M] indicating the weight to
+        assign to all pred_boxes match to a particular groundtruth box. The
+        weights must be in [0., 1.]. If None, all weights are set to 1.
+        Generally no groundtruth boxes with zero weight match to any pred_boxes
+        as matchers are aware of groundtruth weights. Additionally,
+        `cls_weights` and `reg_weights` are calculated using groundtruth
+        weights as an added safety.
 
     Returns:
-      cls_targets: a float32 tensor with shape [num_box_preds, num_classes],
-        where the subshape [num_classes] is compatible with groundtruth_labels
+      cls_targets: a float32 tensor with shape [num_pred_boxes, num_classes],
+        where the subshape [num_classes] is compatible with gt_labels
         which has shape [num_gt_boxes, num_classes].
-      cls_weights: a float32 tensor with shape [num_box_preds, num_classes],
+      cls_weights: a float32 tensor with shape [num_pred_boxes, num_classes],
         representing weights for each element in cls_targets.
-      reg_targets: a float32 tensor with shape [num_box_preds, box_code_dimension]
-      reg_weights: a float32 tensor with shape [num_box_preds]
+      reg_targets: a float32 tensor with shape [num_pred_boxes,
+        box_code_dimension]
+      reg_weights: a float32 tensor with shape [num_pred_boxes]
 
     """
-    unmatched_class_label = tf.constant([1] + [0] * (groundtruth_labels.shape[1] - 1), tf.float32)
+    unmatched_class_label = tf.constant(
+        [1] + [0] * (gt_labels.shape[1] - 1), tf.float32)
 
-    if groundtruth_weights is None:
-      num_gt_boxes = groundtruth_boxes.num_boxes_static()
+    if gt_weights is None:
+      num_gt_boxes = gt_boxes.num_boxes_static()
       if not num_gt_boxes:
-        num_gt_boxes = groundtruth_boxes.num_boxes()
-      groundtruth_weights = tf.ones([num_gt_boxes], dtype=tf.float32)
+        num_gt_boxes = gt_boxes.num_boxes()
+      gt_weights = tf.ones([num_gt_boxes], dtype=tf.float32)
 
-    groundtruth_boxes.add_field(fields.BoxListFields.classes, groundtruth_labels)
-    box_preds.add_field(fields.BoxListFields.classes, class_predictions)
+    gt_boxes.add_field(fields.BoxListFields.classes,
+                                gt_labels)
+    pred_boxes.add_field(fields.BoxListFields.classes, pred_classes)
 
     match_quality_matrix = self._similarity_calc.compare(
-        groundtruth_boxes,
-        box_preds)
+        gt_boxes,
+        pred_boxes)
     match = self._matcher.match(match_quality_matrix,
-                                valid_rows=tf.greater(groundtruth_weights, 0))
+                                valid_rows=tf.greater(gt_weights, 0))
 
     matched_gt_boxes = match.gather_based_on_match(
-        groundtruth_boxes.get(),
+        gt_boxes.get(),
         unmatched_value=tf.zeros(4),
         ignored_value=tf.zeros(4))
     matched_gt_boxlist = box_list.BoxList(matched_gt_boxes)
     ty, tx, th, tw = matched_gt_boxlist.get_center_coordinates_and_sizes()
     reg_targets = tf.transpose(tf.stack([ty, tx, th, tw]))
     cls_targets = match.gather_based_on_match(
-        groundtruth_labels,
+        gt_labels,
         unmatched_value=unmatched_class_label,
         ignored_value=unmatched_class_label)
     reg_weights = match.gather_based_on_match(
-        groundtruth_weights,
+        gt_weights,
         ignored_value=0.,
         unmatched_value=0.)
     cls_weights = match.gather_based_on_match(
-        groundtruth_weights,
+        gt_weights,
         ignored_value=0.,
-        unmatched_value=self._negative_class_weight)
+        unmatched_value=1)
 
     # convert cls_weights from per-box_pred to per-class.
     class_label_shape = tf.shape(cls_targets)[1:]
