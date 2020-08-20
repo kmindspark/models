@@ -82,7 +82,7 @@ class DETRMetaArch(model.DetectionModel):
     self._image_resizer_fn = image_resizer_fn
     self.num_queries = num_queries
     self.hidden_dimension = hidden_dimension
-    self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=is_training, weight_decay=0.0001) #feature_extractor
+    self.feature_extractor = feature_extractor
     self.first_stage = feature_extractor.get_proposal_feature_extractor_model()
     self.target_assigner = target_assigner
     self.transformer_args = {"hidden_size": self.hidden_dimension,
