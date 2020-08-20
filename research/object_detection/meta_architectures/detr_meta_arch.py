@@ -82,7 +82,7 @@ class DETRMetaArch(model.DetectionModel):
     self._image_resizer_fn = image_resizer_fn
     self.num_queries = num_queries
     self.hidden_dimension = hidden_dimension
-    self.feature_extractor = feature_extractor
+    self.feature_extractor = faster_rcnn_resnet_keras_feature_extractor.FasterRCNNResnet50KerasFeatureExtractor(is_training=is_training, weight_decay=0.0001) #feature_extractor
     self.first_stage = feature_extractor.get_proposal_feature_extractor_model()
     self.target_assigner = target_assigner
     self.transformer_args = {"hidden_size": self.hidden_dimension,
@@ -328,7 +328,7 @@ class DETRMetaArch(model.DetectionModel):
       paddings_indicator = self._padded_batched_proposals_indicator(
           num_proposals, proposal_boxes.shape[1])
       proposal_boxlists = [
-          box_list.BoxList(proposal_boxes_single_image)
+          box_list.BoxList(convert_to_minmaxcoords(proposal_boxes_single_image))
           for proposal_boxes_single_image in tf.unstack(proposal_boxes)]
       batch_size = len(proposal_boxlists)
 
