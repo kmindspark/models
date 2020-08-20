@@ -286,11 +286,6 @@ class DETRMetaArch(model.DetectionModel):
           gt_class_targets_batch=groundtruth_classes_with_background_list,
           gt_weights_batch=groundtruth_weights_list)
 
-    # Ensure data are of the correct shape
-    class_predictions_with_background = tf.reshape(
-        class_predictions_with_background,
-        [batch_size, self.num_queries, -1])
-
     losses_mask = None
     if self.groundtruth_has_field(fields.InputDataFields.is_annotated):
       losses_mask = tf.stack(self.groundtruth_lists(
@@ -374,10 +369,8 @@ class DETRMetaArch(model.DetectionModel):
     """
     with tf.name_scope('Postprocessor'):
       detections_dict = self._postprocess_box_classifier(
-          prediction_dict['refined_box_encodings'],
+          prediction_dict['box_encodings'],
           prediction_dict['class_predictions_with_background'],
-          prediction_dict['proposal_boxes'],
-          prediction_dict['num_proposals'],
           true_image_shapes,
           orig_image_shapes=prediction_dict['image_shape'])
 
@@ -386,8 +379,6 @@ class DETRMetaArch(model.DetectionModel):
   def _postprocess_box_classifier(self,
                                   refined_box_encodings,
                                   class_predictions_with_background,
-                                  proposal_boxes,
-                                  num_proposals,
                                   image_shapes,
                                   orig_image_shapes=None):
     """Converts predictions from the box classifier to detections.
