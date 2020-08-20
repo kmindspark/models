@@ -86,17 +86,21 @@ class DETRMetaArch(model.DetectionModel):
     self.first_stage = feature_extractor.get_proposal_feature_extractor_model()
     self.target_assigner = target_assigner
     self.transformer_args = {"hidden_size": self.hidden_dimension,
-                             "attention_dropout": 0.1,
+                             "attention_dropout": 0.0,
                              "num_heads": 8,
                              "layer_postprocess_dropout": 0.1,
                              "dtype": tf.float32, 
-                             "num_hidden_layers": 3,
-                             "filter_size": 256,
-                             "relu_dropout": 0.1}
+                             "num_hidden_layers": 6,
+                             "filter_size": 2048,
+                             "relu_dropout": 0.0}
     self.transformer = detr_lib.Transformer(**self.transformer_args)
     self.cls = tf.keras.layers.Dense(num_classes + 1)
     self.cls_activation = tf.keras.layers.Softmax()
-    self.queries = tf.keras.backend.variable(tf.zeros([self.num_queries, self.hidden_dimension]))
+    self.queries = tf.keras.backend.variable(
+        value=tf.random_normal_initializer(stddev=1.0)(
+            [self.num_queries, self.hidden_dimension]),
+            name="object_queries",
+            dtype=tf.float32)
     self._localization_loss = losses.WeightedSmoothL1LocalizationLoss()
     self._localization_loss_iou = losses.WeightedGIOULocalizationLoss()
     self._classification_loss = losses.WeightedSoftmaxClassificationLoss()
