@@ -316,17 +316,17 @@ class DETRMetaArch(model.DetectionModel):
         corresponding loss values.
     """
     def convert_to_minmaxcoords(input_tensor):
-        reshaped_encodings = tf.reshape(input_tensor, [-1, 4])
-        ycenter = tf.gather(reshaped_encodings, [0], axis=1)
-        xcenter = tf.gather(reshaped_encodings, [1], axis=1)
-        h = tf.gather(reshaped_encodings, [2], axis=1)
-        w = tf.gather(reshaped_encodings, [3], axis=1)
-        ymin = ycenter - h / 2.
-        xmin = xcenter - w / 2.
-        ymax = ycenter + h / 2.
-        xmax = xcenter + w / 2.
-        #print("RESULT", tf.stack([ymin, xmin, ymax, xmax], axis=1))
-        return tf.squeeze(tf.stack([ymin, xmin, ymax, xmax], axis=1))
+      reshaped_encodings = tf.reshape(input_tensor, [-1, 4])
+      ycenter = tf.gather(reshaped_encodings, [0], axis=1)
+      xcenter = tf.gather(reshaped_encodings, [1], axis=1)
+      h = tf.gather(reshaped_encodings, [2], axis=1)
+      w = tf.gather(reshaped_encodings, [3], axis=1)
+      ymin = ycenter - h / 2.
+      xmin = xcenter - w / 2.
+      ymax = ycenter + h / 2.
+      xmax = xcenter + w / 2.
+      #print("RESULT", tf.stack([ymin, xmin, ymax, xmax], axis=1))
+      return tf.squeeze(tf.stack([ymin, xmin, ymax, xmax], axis=1))
 
     with tf.name_scope('BoxClassifierLoss'):
       paddings_indicator = self._padded_batched_proposals_indicator(
