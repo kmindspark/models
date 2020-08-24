@@ -98,9 +98,9 @@ class IouAndClassSimilarity(RegionSimilarityCalculator):
     groundtruth_labels = tf.concat([tf.expand_dims(groundtruth_labels[:, 0] / 2, axis=1), groundtruth_labels[:, 1:]], axis=-1)
     classification_scores = tf.matmul(groundtruth_labels,
         tf.nn.softmax(predicted_labels), transpose_b=True)
-    return -0.001 * box_list_ops.l1(boxlist1, boxlist2) + \
+    return -0.00 * box_list_ops.l1(boxlist1, boxlist2) + \
            classification_scores + \
-           0.001 * (1 - box_list_ops.giou_loss(boxlist1, boxlist2))
+           0.00 * (1 - box_list_ops.giou_loss(boxlist1, boxlist2))
 
 class NegSqDistSimilarity(RegionSimilarityCalculator):
   """Class to compute similarity based on the squared distance metric.

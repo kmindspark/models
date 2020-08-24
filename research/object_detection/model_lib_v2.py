@@ -615,7 +615,7 @@ def train_loop(
           tf.print("Sample and train func time:", tf.timestamp() - cur_time)
           return return_val
 
-        #@tf.function
+        @tf.function
         def _dist_train_step(data_iterator):
           """A distributed train step."""
 
