@@ -332,7 +332,7 @@ class DETRMetaArch(model.DetectionModel):
       paddings_indicator = self._padded_batched_proposals_indicator(
           num_proposals, proposal_boxes.shape[1])
       proposal_boxlists = [
-          box_list.BoxList(convert_to_minmaxcoords(proposal_boxes_single_image))
+          box_list.BoxList(proposal_boxes_single_image) #convert_to_minmaxcoords(proposal_boxes_single_image))
           for proposal_boxes_single_image in tf.unstack(proposal_boxes)]
       batch_size = len(proposal_boxlists)
 
