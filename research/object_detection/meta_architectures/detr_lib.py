@@ -283,8 +283,8 @@ class EncoderStack(tf.keras.layers.Layer):
           self._hidden_size, self._filter_size, self._relu_dropout)
 
       self.layers.append([
-          PrePostProcessingWrapperOld(self_attention_layer, self._layer_postprocess_dropout),
-          PrePostProcessingWrapperOld(feed_forward_network, self._layer_postprocess_dropout)
+          PrePostProcessingWrapper(self_attention_layer, self._layer_postprocess_dropout),
+          PrePostProcessingWrapper(feed_forward_network, self._layer_postprocess_dropout)
       ])
 
     # Create final layer normalization layer.
@@ -374,9 +374,9 @@ class DecoderStack(tf.keras.layers.Layer):
           self._hidden_size, self._filter_size, self._relu_dropout)
 
       self.layers.append([
-          PrePostProcessingWrapperOld(self_attention_layer, self._layer_postprocess_dropout),
-          PrePostProcessingWrapperOld(enc_dec_attention_layer, self._layer_postprocess_dropout),
-          PrePostProcessingWrapperOld(feed_forward_network, self._layer_postprocess_dropout)
+          PrePostProcessingWrapper(self_attention_layer, self._layer_postprocess_dropout),
+          PrePostProcessingWrapper(enc_dec_attention_layer, self._layer_postprocess_dropout),
+          PrePostProcessingWrapper(feed_forward_network, self._layer_postprocess_dropout)
       ])
     self.output_normalization = tf.keras.layers.LayerNormalization(
         epsilon=1e-6, dtype="float32")
